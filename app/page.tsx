@@ -81,177 +81,192 @@ export default function AuraMultiRoom() {
     }
   };
 
-  // --- CORE LOGIC: File Processing ---
+ // --- CORE LOGIC: File Processing with Compression ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  setLoading(true); // Start the loading spinner/status
+    setLoading(true);
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      
+      img.onload = async () => {
+        // 1. COMPRESS IMAGE: Mobile photos are too big for Vercel (4.5MB limit)
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1024; // Optimization for AI
+        const scale = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scale;
+        
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // 0.7 quality keeps it sharp but small
+        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
 
-  const reader = new FileReader();
-  reader.onload = async (event) => {
-    const base64Image = event.target?.result as string;
+        // 2. Update UI immediately
+        updateActiveRoom({ image: compressedBase64 });
 
-    // 1. Update the UI immediately so the user sees their photo
-    updateActiveRoom({ image: base64Image });
+        try {
+          // 3. Call AI API
+          const response = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: compressedBase64 }),
+          });
 
-    try {
-      // 2. Call the AI API
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: base64Image }),
-      });
+          if (!response.ok) throw new Error(`Server error: ${response.status}`);
 
-      const data = await response.json();
-
-      if (data.items) {
-        // 3. Update the room with the AI's findings
-        updateActiveRoom({ inventory: data.items });
-      }
-    } catch (error) {
-      console.error("Scan failed:", error);
-      alert("Scan timed out or failed. Please try a smaller photo.");
-    } finally {
-      setLoading(false); // Stop the loading status
-    }
-  };
-    reader.readAsDataURL(file);
-  }; // <-- Add this closing brace to end handleFileUpload
-  
-    const handlePlacementClick = (e: React.MouseEvent<HTMLDivElement>) => {
-      if (viewMode !== "unpack" || selectedItemToPlace === null) return;
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = ((e.clientX - rect.left) / rect.width) * 1000;
-      const y = ((e.clientY - rect.top) / rect.height) * 1000;
-  
-      setRooms(prev => prev.map(r => {
-        if (r.id !== activeRoomId) return r;
-        const newInv = [...r.inventory];
-        newInv[selectedItemToPlace] = { ...newInv[selectedItemToPlace], target_box_2d: [y - 30, x - 40, y + 30, x + 40] };
-        return { ...r, inventory: newInv };
-      }));
-      setSelectedItemToPlace(null);
+          const data = await response.json();
+          if (data.items) {
+            updateActiveRoom({ inventory: data.items });
+          } else {
+            alert("Scan complete, but no items were detected.");
+          }
+        } catch (error: any) {
+          console.error("Scan failed:", error);
+          alert("Scan failed. Try a different angle or smaller photo.");
+        } finally {
+          setLoading(false);
+        }
+      };
     };
+    reader.readAsDataURL(file);
+  };
 
   const calculateRoomVolume = (room: Room) => room.inventory.reduce((sum, item) => sum + (item.volume_per_unit * item.quantity), 0);
   const totalVolume = rooms.reduce((acc, r) => acc + calculateRoomVolume(r), 0);
   const totalQuote = totalVolume > 0 ? (totalVolume * PRICE_PER_M3) + BASE_SERVICE_FEE : 0;
 
   return (
-  <div className="min-h-screen bg-[#fcfaf7] flex flex-col font-sans text-stone-900 overflow-x-hidden">
-    {/* HEADER */}
-    <header className="p-4 md:p-6 bg-white border-b flex flex-col sm:flex-row justify-between items-center shadow-sm gap-4 sticky top-0 z-50">
-      <div className="text-center sm:text-left">
-        <h1 className="text-xl font-black uppercase tracking-tighter italic">AURA LOGISTICS</h1>
-        <div className="flex gap-2 mt-2 justify-center sm:justify-start">
-          <button 
-            onClick={() => setViewMode('survey')}
-            className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase transition-all ${viewMode === 'survey' ? 'bg-stone-900 text-white shadow-md' : 'bg-stone-100 text-stone-400'}`}
-          >
-            Survey
-          </button>
-          <button 
-            onClick={() => setViewMode('unpack')}
-            className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase transition-all ${viewMode === 'unpack' ? 'bg-purple-600 text-white shadow-md' : 'bg-stone-100 text-stone-400'}`}
-          >
-            Unpack
-          </button>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4 bg-stone-50 px-4 py-2 rounded-xl border border-stone-100 w-full sm:w-auto justify-center">
-        <div className="text-center sm:text-right">
-          <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest leading-none mb-1">Status</p>
-          <p className="text-xl font-black text-cyan-600">{loading ? 'SCANNING...' : 'READY'}</p>
-        </div>
-      </div>
-    </header>
-
-    <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-      {/* SIDEBAR */}
-      <aside className="hidden lg:flex w-64 bg-stone-50 border-r p-6 flex-col overflow-y-auto shrink-0">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Active Rooms</h2>
-          <button onClick={() => setRooms([...rooms, { id: Date.now().toString(), name: "New Room", image: null, targetImage: null, inventory: [] }])} className="p-1 hover:bg-stone-200 rounded-full transition-colors">
-            <Plus size={14} />
-          </button>
-        </div>
-        <div className="space-y-1">
-          {rooms.map(room => (
-            <button
-              key={room.id}
-              onClick={() => setActiveRoomId(room.id)}
-              className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-between ${activeRoomId === room.id ? 'bg-white shadow-sm text-stone-900 ring-1 ring-stone-200' : 'text-stone-400 hover:text-stone-600'}`}
+    <div className="min-h-screen bg-[#fcfaf7] flex flex-col font-sans text-stone-900 overflow-x-hidden">
+      {/* HEADER */}
+      <header className="p-4 md:p-6 bg-white border-b flex flex-col sm:flex-row justify-between items-center shadow-sm gap-4 sticky top-0 z-50">
+        <div className="text-center sm:text-left">
+          <h1 className="text-xl font-black uppercase tracking-tighter italic">AURA LOGISTICS</h1>
+          <div className="flex gap-2 mt-2 justify-center sm:justify-start">
+            <button 
+              onClick={() => setViewMode('survey')}
+              className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase transition-all ${viewMode === 'survey' ? 'bg-stone-900 text-white shadow-md' : 'bg-stone-100 text-stone-400'}`}
             >
-              {room.name}
-              <span className="text-[10px] opacity-50">{room.inventory.length}</span>
+              Survey
             </button>
-          ))}
-        </div>
-      </aside>
-
-      {/* MAIN CONTENT AREA */}
-      <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-white/50">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-          
-          {/* PHOTO BOX */}
-          <div className="lg:col-span-7 space-y-4">
-            <div className="relative w-full aspect-[4/3] md:aspect-video bg-stone-100 rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl group">
-              {activeRoom.image ? (
-                <div className="relative w-full h-full">
-                  <img src={activeRoom.image} alt="Room View" className="w-full h-full object-cover" />
-                  {activeRoom.inventory.map((item, idx) => item.box_2d && (
-                    <div 
-                      key={idx}
-                      className="absolute border-2 border-purple-500 bg-purple-500/20 rounded-md"
-                      style={{
-                        top: `${item.box_2d[0] / 10}%`,
-                        left: `${item.box_2d[1] / 10}%`,
-                        height: `${(item.box_2d[2] - item.box_2d[0]) / 10}%`,
-                        width: `${(item.box_2d[3] - item.box_2d[1]) / 10}%`
-                      }}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                  <Camera size={48} className="text-stone-300 mb-4" />
-                  <p className="text-sm font-bold text-stone-400 uppercase tracking-widest">Capture Room to Start Survey</p>
-                  {/* You'll need to link your file upload handler here */}
-                </div>
-              )}
-            </div>
+            <button 
+              onClick={() => setViewMode('unpack')}
+              className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase transition-all ${viewMode === 'unpack' ? 'bg-purple-600 text-white shadow-md' : 'bg-stone-100 text-stone-400'}`}
+            >
+              Unpack
+            </button>
           </div>
+        </div>
 
-          {/* INVENTORY LIST */}
-          <div className="lg:col-span-5">
-            <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100">
-              <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-6">Inventory</h3>
-              <div className="space-y-3">
-                {activeRoom.inventory.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-transparent hover:border-cyan-100 transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-cyan-600 text-xs">
-                        {item.item.substring(0, 1)}
+        <div className="flex items-center gap-4 bg-stone-50 px-4 py-2 rounded-xl border border-stone-100 w-full sm:w-auto justify-center">
+          <div className="text-center sm:text-right">
+            <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest leading-none mb-1">Live Estimate</p>
+            <p className="text-xl font-black text-cyan-600">${totalQuote.toLocaleString()}</p>
+          </div>
+        </div>
+      </header>
+
+      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
+        {/* SIDEBAR */}
+        <aside className="hidden lg:flex w-64 bg-stone-50 border-r p-6 flex-col overflow-y-auto shrink-0">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Active Rooms</h2>
+            <button onClick={() => setRooms([...rooms, { id: Date.now().toString(), name: "New Room", image: null, targetImage: null, inventory: [] }])} className="p-1 hover:bg-stone-200 rounded-full transition-colors">
+              <Plus size={14} />
+            </button>
+          </div>
+          <div className="space-y-1">
+            {rooms.map(room => (
+              <button
+                key={room.id}
+                onClick={() => setActiveRoomId(room.id)}
+                className={`w-full text-left px-3 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-between ${activeRoomId === room.id ? 'bg-white shadow-sm text-stone-900 ring-1 ring-stone-200' : 'text-stone-400 hover:text-stone-600'}`}
+              >
+                {room.name}
+                <span className="text-[10px] opacity-50">{room.inventory.length}</span>
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        {/* MAIN CONTENT AREA */}
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-white/50">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+            
+            {/* PHOTO BOX: FIXED SCALING */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="relative w-full aspect-[4/3] md:aspect-video bg-stone-900 rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl">
+                {activeRoom.image ? (
+                  <div className="relative w-full h-full">
+                    {/* Use object-contain to ensure the AI's 0-1000 grid matches the display exactly */}
+                    <img src={activeRoom.image} alt="Room View" className="w-full h-full object-contain" />
+                    
+                    {activeRoom.inventory.map((item, idx) => item.box_2d && (
+                      <div 
+                        key={idx}
+                        className="absolute border-2 border-purple-500 bg-purple-500/20 rounded-md pointer-events-none"
+                        style={{
+                          top: `${item.box_2d[0] / 10}%`,
+                          left: `${item.box_2d[1] / 10}%`,
+                          height: `${(item.box_2d[2] - item.box_2d[0]) / 10}%`,
+                          width: `${(item.box_2d[3] - item.box_2d[1]) / 10}%`
+                        }}
+                      />
+                    ))}
+                    
+                    {loading && (
+                      <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center backdrop-blur-sm">
+                        <div className="text-center">
+                          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                          <p className="text-white font-black uppercase tracking-widest text-[10px]">Analyzing Aura...</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-stone-900">{item.item}</p>
-                        <p className="text-[10px] font-black text-stone-400 uppercase">Qty: {item.quantity} | Vol: {item.volume_per_unit}</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
-                ))}
-                {activeRoom.inventory.length === 0 && (
-                  <p className="text-center py-10 text-stone-400 text-xs font-bold uppercase tracking-widest">No items scanned yet</p>
+                ) : (
+                  <label className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-stone-200 transition-all">
+                    <Camera size={48} className="text-stone-300 mb-4" />
+                    <p className="text-sm font-bold text-stone-400 uppercase tracking-widest">Capture Room to Start Survey</p>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                  </label>
                 )}
               </div>
             </div>
-          </div>
 
-        </div>
-      </main>
+            {/* INVENTORY LIST */}
+            <div className="lg:col-span-5">
+              <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100">
+                <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-6">Inventory</h3>
+                <div className="space-y-3">
+                  {activeRoom.inventory.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-200">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-cyan-600 text-xs">
+                          {item.item.substring(0, 1)}
+                        </div>
+                        <div>
+                          <p className="font-bold text-stone-900 text-sm">{item.item}</p>
+                          <p className="text-[10px] font-black text-stone-400 uppercase">Vol: {item.volume_per_unit} ft³</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                         <button onClick={() => updateQuantity(activeRoom.id, idx, -1)} className="w-6 h-6 rounded-full bg-white border flex items-center justify-center text-xs shadow-sm">-</button>
+                         <span className="font-black text-sm w-4 text-center">{item.quantity}</span>
+                         <button onClick={() => updateQuantity(activeRoom.id, idx, 1)} className="w-6 h-6 rounded-full bg-white border flex items-center justify-center text-xs shadow-sm">+</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
-  </div>
   );
 }
