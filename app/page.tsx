@@ -1,7 +1,7 @@
-'use client' // <--- 1. Flag first!
+'use client'
 
-import { useState, useEffect } from 'react'; // <--- 2. React imports
-import { Plus, Camera, Trash2, Box, Home as HomeIcon } from 'lucide-react'; // <--- 3. Icons
+import { useState } from 'react';
+import { Plus, Camera, Trash2, Box, Home as HomeIcon } from 'lucide-react';
 
 // --- CONFIGURATION ---
 const PRICE_PER_M3 = 185;
@@ -24,79 +24,47 @@ interface Room {
 }
 
 export default function AuraMultiRoom() {
+  // --- STATE ---
   const [rooms, setRooms] = useState<Room[]>([
     { id: "1", name: "Living Room", image: null, targetImage: null, inventory: [] }
   ]);
   const [activeRoomId, setActiveRoomId] = useState("1");
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState<"survey" | "unpack">("survey");
-  const [selectedItemToPlace, setSelectedItemToPlace] = useState<number | null>(null);
 
+  // --- HELPERS ---
   const activeRoom = rooms.find(r => r.id === activeRoomId) || rooms[0];
 
   const updateActiveRoom = (updates: Partial<Room>) => {
     setRooms(prev => prev.map(r => r.id === activeRoomId ? { ...r, ...updates } : r));
   };
 
-  // --- CORE LOGIC: Quantity Toggles ---
   const updateQuantity = (roomId: string, itemIndex: number, delta: number) => {
     setRooms(prev => prev.map(r => {
       if (r.id !== roomId) return r;
       const newInventory = [...r.inventory];
-      newInventory[itemIndex] = { ...newInventory[itemIndex], quantity: Math.max(0, newInventory[itemIndex].quantity + delta) };
+      const currentQty = newInventory[itemIndex].quantity;
+      newInventory[itemIndex] = { ...newInventory[itemIndex], quantity: Math.max(0, currentQty + delta) };
       return { ...r, inventory: newInventory };
     }));
   };
 
-  // --- CORE LOGIC: Sidebar Management ---
-  const removeRoom = (id: string) => {
-    if (rooms.length <= 1) {
-      startOver();
-      return;
-    }
-    const newRooms = rooms.filter(r => r.id !== id);
-    setRooms(newRooms);
-    if (activeRoomId === id) setActiveRoomId(newRooms[0].id);
-  };
-
-  const startOver = () => {
-    if (confirm("Reset everything? This wipes all rooms, photos, and inventory data.")) {
-      const initialId = Date.now().toString();
-      setRooms([{ id: initialId, name: "Living Room", image: null, targetImage: null, inventory: [] }]);
-      setActiveRoomId(initialId);
-      setViewMode("survey");
-    }
-  };
-
-  const resetRoomUnpack = () => {
-    if (confirm(`Clear all placements for ${activeRoom.name}? Inventory items will be kept.`)) {
-      setRooms(prev => prev.map(r => {
-        if (r.id !== activeRoomId) return r;
-        return {
-          ...r,
-          inventory: r.inventory.map(item => ({ ...item, target_box_2d: undefined }))
-        };
-      }));
-      setSelectedItemToPlace(null);
-    }
-  };
-
- // --- CORE LOGIC: File Processing with Compression ---
+  // --- FILE PROCESSING (Optimized for Mobile) ---
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setLoading(true);
-    
+
     const reader = new FileReader();
     reader.onload = async (event) => {
       const img = new Image();
       img.src = event.target?.result as string;
       
       img.onload = async () => {
-        // 1. COMPRESS IMAGE: Mobile photos are too big for Vercel (4.5MB limit)
+        // Create a canvas to compress the image
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 1024; // Optimization for AI
+        const MAX_WIDTH = 1024; 
         const scale = MAX_WIDTH / img.width;
         canvas.width = MAX_WIDTH;
         canvas.height = img.height * scale;
@@ -104,14 +72,13 @@ export default function AuraMultiRoom() {
         const ctx = canvas.getContext('2d');
         ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
         
-        // 0.7 quality keeps it sharp but small
+        // 0.7 quality ensures we stay under Vercel's 4.5MB payload limit
         const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
 
-        // 2. Update UI immediately
+        // Update UI immediately with the photo
         updateActiveRoom({ image: compressedBase64 });
 
         try {
-          // 3. Call AI API
           const response = await fetch('/api/analyze', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -122,13 +89,16 @@ export default function AuraMultiRoom() {
 
           const data = await response.json();
           if (data.items) {
-            updateActiveRoom({ inventory: data.items });
-          } else {
-            alert("Scan complete, but no items were detected.");
+            // Map incoming items to include a default quantity of 1
+            const itemsWithQty = data.items.map((item: any) => ({
+              ...item,
+              quantity: item.quantity || 1
+            }));
+            updateActiveRoom({ inventory: itemsWithQty });
           }
         } catch (error: any) {
           console.error("Scan failed:", error);
-          alert("Scan failed. Try a different angle or smaller photo.");
+          alert("Aura encountered an error scanning this photo. Try a smaller file.");
         } finally {
           setLoading(false);
         }
@@ -137,7 +107,9 @@ export default function AuraMultiRoom() {
     reader.readAsDataURL(file);
   };
 
-  const calculateRoomVolume = (room: Room) => room.inventory.reduce((sum, item) => sum + (item.volume_per_unit * item.quantity), 0);
+  const calculateRoomVolume = (room: Room) => 
+    room.inventory.reduce((sum, item) => sum + (item.volume_per_unit * (item.quantity || 1)), 0);
+  
   const totalVolume = rooms.reduce((acc, r) => acc + calculateRoomVolume(r), 0);
   const totalQuote = totalVolume > 0 ? (totalVolume * PRICE_PER_M3) + BASE_SERVICE_FEE : 0;
 
@@ -165,18 +137,25 @@ export default function AuraMultiRoom() {
 
         <div className="flex items-center gap-4 bg-stone-50 px-4 py-2 rounded-xl border border-stone-100 w-full sm:w-auto justify-center">
           <div className="text-center sm:text-right">
-            <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest leading-none mb-1">Live Estimate</p>
+            <p className="text-[9px] font-black text-stone-400 uppercase tracking-widest leading-none mb-1">Est. Quote</p>
             <p className="text-xl font-black text-cyan-600">${totalQuote.toLocaleString()}</p>
           </div>
         </div>
       </header>
 
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-        {/* SIDEBAR */}
+        {/* SIDEBAR - Desktop Only */}
         <aside className="hidden lg:flex w-64 bg-stone-50 border-r p-6 flex-col overflow-y-auto shrink-0">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-[10px] font-black text-stone-400 uppercase tracking-widest">Active Rooms</h2>
-            <button onClick={() => setRooms([...rooms, { id: Date.now().toString(), name: "New Room", image: null, targetImage: null, inventory: [] }])} className="p-1 hover:bg-stone-200 rounded-full transition-colors">
+            <button 
+              onClick={() => {
+                const newId = Date.now().toString();
+                setRooms([...rooms, { id: newId, name: "New Room", image: null, targetImage: null, inventory: [] }]);
+                setActiveRoomId(newId);
+              }}
+              className="p-1 hover:bg-stone-200 rounded-full transition-colors"
+            >
               <Plus size={14} />
             </button>
           </div>
@@ -194,21 +173,21 @@ export default function AuraMultiRoom() {
           </div>
         </aside>
 
-        {/* MAIN CONTENT AREA */}
+        {/* MAIN AREA */}
         <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-white/50">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
             
-            {/* PHOTO BOX: FIXED SCALING */}
+            {/* PHOTO BOX */}
             <div className="lg:col-span-7 space-y-4">
               <div className="relative w-full aspect-[4/3] md:aspect-video bg-stone-900 rounded-[2rem] overflow-hidden border-4 border-white shadow-2xl">
                 {activeRoom.image ? (
                   <div className="relative w-full h-full">
-                    {/* Use object-contain to ensure the AI's 0-1000 grid matches the display exactly */}
-                    <img src={activeRoom.image} alt="Room View" className="w-full h-full object-contain" />
+                    <img src={activeRoom.image} alt="Room" className="w-full h-full object-contain" />
                     
+                    {/* DRAWING BOXES */}
                     {activeRoom.inventory.map((item, idx) => item.box_2d && (
                       <div 
-                        key={idx}
+                        key={`box-${idx}`}
                         className="absolute border-2 border-purple-500 bg-purple-500/20 rounded-md pointer-events-none"
                         style={{
                           top: `${item.box_2d[0] / 10}%`,
@@ -218,30 +197,39 @@ export default function AuraMultiRoom() {
                         }}
                       />
                     ))}
-                    
-                    {loading && (
-                      <div className="absolute inset-0 bg-stone-900/60 flex items-center justify-center backdrop-blur-sm">
-                        <div className="text-center">
-                          <div className="w-12 h-12 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                          <p className="text-white font-black uppercase tracking-widest text-[10px]">Analyzing Aura...</p>
-                        </div>
-                      </div>
-                    )}
+
+                    {/* RE-UPLOAD BUTTON */}
+                    <label className="absolute bottom-4 right-4 bg-white/90 p-3 rounded-full shadow-lg cursor-pointer z-20">
+                      <Camera size={20} className="text-stone-900" />
+                      <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+                    </label>
                   </div>
                 ) : (
-                  <label className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center cursor-pointer hover:bg-stone-200 transition-all">
-                    <Camera size={48} className="text-stone-300 mb-4" />
-                    <p className="text-sm font-bold text-stone-400 uppercase tracking-widest">Capture Room to Start Survey</p>
+                  <label className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center cursor-pointer bg-stone-100 hover:bg-stone-200 transition-colors">
+                    <div className="bg-white p-6 rounded-full shadow-sm mb-4">
+                      <Camera size={48} className="text-stone-300 pointer-events-none" />
+                    </div>
+                    <p className="text-sm font-black text-stone-500 uppercase tracking-widest">Capture Room to Scan</p>
                     <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
                   </label>
+                )}
+
+                {/* LOADING OVERLAY */}
+                {loading && (
+                  <div className="absolute inset-0 bg-stone-900/80 flex items-center justify-center backdrop-blur-md z-50">
+                    <div className="text-center">
+                      <div className="w-16 h-16 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <p className="text-white font-black uppercase tracking-widest text-xs italic">Aura Scanning...</p>
+                    </div>
+                  </div>
                 )}
               </div>
             </div>
 
             {/* INVENTORY LIST */}
             <div className="lg:col-span-5">
-              <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100">
-                <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-6">Inventory</h3>
+              <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100 min-h-[300px]">
+                <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-6">Room Inventory</h3>
                 <div className="space-y-3">
                   {activeRoom.inventory.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-200">
@@ -261,6 +249,12 @@ export default function AuraMultiRoom() {
                       </div>
                     </div>
                   ))}
+                  {!loading && activeRoom.inventory.length === 0 && (
+                    <div className="text-center py-10">
+                      <Box className="mx-auto text-stone-200 mb-2" size={32} />
+                      <p className="text-[10px] font-black text-stone-300 uppercase tracking-widest">Inventory Empty</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
