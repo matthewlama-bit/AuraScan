@@ -116,23 +116,23 @@ export default function AuraMultiRoom() {
       setLoading(false); // Stop the loading status
     }
   };
-  reader.readAsDataURL(file);
-};
-
-  const handlePlacementClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (viewMode !== "unpack" || selectedItemToPlace === null) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 1000;
-    const y = ((e.clientY - rect.top) / rect.height) * 1000;
-
-    setRooms(prev => prev.map(r => {
-      if (r.id !== activeRoomId) return r;
-      const newInv = [...r.inventory];
-      newInv[selectedItemToPlace] = { ...newInv[selectedItemToPlace], target_box_2d: [y - 30, x - 40, y + 30, x + 40] };
-      return { ...r, inventory: newInv };
-    }));
-    setSelectedItemToPlace(null);
-  };
+    reader.readAsDataURL(file);
+  }; // <-- Add this closing brace to end handleFileUpload
+  
+    const handlePlacementClick = (e: React.MouseEvent<HTMLDivElement>) => {
+      if (viewMode !== "unpack" || selectedItemToPlace === null) return;
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((e.clientX - rect.left) / rect.width) * 1000;
+      const y = ((e.clientY - rect.top) / rect.height) * 1000;
+  
+      setRooms(prev => prev.map(r => {
+        if (r.id !== activeRoomId) return r;
+        const newInv = [...r.inventory];
+        newInv[selectedItemToPlace] = { ...newInv[selectedItemToPlace], target_box_2d: [y - 30, x - 40, y + 30, x + 40] };
+        return { ...r, inventory: newInv };
+      }));
+      setSelectedItemToPlace(null);
+    };
 
   const calculateRoomVolume = (room: Room) => room.inventory.reduce((sum, item) => sum + (item.volume_per_unit * item.quantity), 0);
   const totalVolume = rooms.reduce((acc, r) => acc + calculateRoomVolume(r), 0);
@@ -253,4 +253,5 @@ export default function AuraMultiRoom() {
       </main>
     </div>
   </div>
-);
+  );
+}
