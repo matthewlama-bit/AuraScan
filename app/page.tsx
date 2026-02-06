@@ -23,7 +23,7 @@ export default function AuraMultiRoom() {
     addRoom,
   } = useRooms();
 
-  const { handleFileUpload, loading } = useFileUpload(updateActiveRoom);
+  const { handleFileUpload, loading } = useFileUpload(updateActiveRoom, activeRoom);
 
   const calculateRoomVolume = (room: Room) =>
     room.inventory.reduce((sum: number, item: InventoryItem) => sum + (item.volume_per_unit * (item.quantity || 1)), 0);

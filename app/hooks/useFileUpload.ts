@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { Room } from '../types';
 
-export function useFileUpload(updateActiveRoom: (updates: Partial<Room>) => void) {
+export function useFileUpload(updateActiveRoom: (updates: Partial<Room>) => void, activeRoom?: Room) {
   const [loading, setLoading] = useState(false);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -43,10 +43,11 @@ export function useFileUpload(updateActiveRoom: (updates: Partial<Room>) => void
     updateActiveRoom({ image: compressedImages[0], images: compressedImages });
 
     try {
+      const imageOffset = activeRoom?.images?.length || 0;
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: compressedImages, imageOffset: 0 }),
+        body: JSON.stringify({ images: compressedImages, imageOffset }),
       });
 
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
