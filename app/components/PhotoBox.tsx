@@ -33,7 +33,7 @@ export default function PhotoBox({ activeRoom, handleFileUpload, loading }: Phot
             {/* RE-UPLOAD BUTTON */}
             <label className="absolute bottom-4 right-4 bg-white/90 p-3 rounded-full shadow-lg cursor-pointer z-20">
               <Camera size={20} className="text-stone-900" />
-              <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+              <input type="file" className="hidden" accept="image/*" multiple onChange={handleFileUpload} />
             </label>
           </div>
         ) : (
@@ -41,8 +41,8 @@ export default function PhotoBox({ activeRoom, handleFileUpload, loading }: Phot
             <div className="bg-white p-6 rounded-full shadow-sm mb-4">
               <Camera size={48} className="text-stone-300 pointer-events-none" />
             </div>
-            <p className="text-sm font-black text-stone-500 uppercase tracking-widest">Capture Room to Scan</p>
-            <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
+            <p className="text-sm font-black text-stone-500 uppercase tracking-widest">Capture Room Images to Scan</p>
+            <input type="file" className="hidden" accept="image/*" multiple onChange={handleFileUpload} />
           </label>
         )}
 

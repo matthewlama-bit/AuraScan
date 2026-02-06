@@ -12,34 +12,28 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { image } = await req.json();
+    const { images } = await req.json(); // Now expects an array of base64 images
 
-    // ...existing code...
-    
-        // ...existing code...
-        
-        const options = {
-          model: "gpt-4o",
-          temperature: 0,
-          messages: [
-            {
-              role: "system",
-              content: `You are a precision moving surveyor. 
-              TASK: Identify all furniture and return coordinates (0-1000 scale) as [ymin, xmin, ymax, xmax].
-              OUTPUT ONLY JSON: {"items": [{"item": "Name", "quantity": 1, "volume_per_unit": 0.5, "box_2d": [ymin, xmin, ymax, xmax]}, ...]}`,
-            },
-            {
-              role: "user",
-              content: [
-                { type: "text", text: "Perform a move survey on this room." },
-                { type: "image_url", image_url: { url: image } }
-              ],
-            }
-          ] as ChatCompletionMessageParam[],
-          response_format: { type: "json_object" as const },
-        };
-        
-        // ...existing code...
+    const options = {
+      model: "gpt-4o",
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: `You are a precision moving surveyor. 
+          TASK: Identify all furniture from the provided images of the same room, merge detections into a single consolidated list (combine quantities for identical items), and return coordinates (0-1000 scale) as [ymin, xmin, ymax, xmax] relative to each image.
+          OUTPUT ONLY JSON: {"items": [{"item": "Name", "quantity": 1, "volume_per_unit": 0.5, "box_2d": [ymin, xmin, ymax, xmax]}, ...]}`,
+        },
+        {
+          role: "user",
+          content: [
+            { type: "text", text: "Perform a move survey on this room using the provided images." },
+            ...images.map((image: string) => ({ type: "image_url", image_url: { url: image } }))
+          ],
+        }
+      ] as ChatCompletionMessageParam[],
+      response_format: { type: "json_object" as const },
+    };
     
     // ...existing code...
 
