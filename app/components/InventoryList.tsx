@@ -13,7 +13,9 @@ export default function InventoryList({ activeRoom, updateQuantity, loading }: I
       <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100 min-h-[300px]">
         <h3 className="text-[10px] font-black text-stone-400 uppercase tracking-widest mb-6">Room Inventory</h3>
         <div className="space-y-3">
-          {activeRoom.inventory.map((item, idx) => (
+          {activeRoom.inventory.map((item, idx) => {
+            const sourceCount = Array.isArray(item.box_2d) && Array.isArray(item.box_2d[0]) ? (item.box_2d as any[]).length : (item.box_2d ? 1 : 0);
+            return (
             <div key={idx} className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-200">
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-cyan-600 text-xs">
@@ -21,7 +23,7 @@ export default function InventoryList({ activeRoom, updateQuantity, loading }: I
                 </div>
                 <div>
                   <p className="font-bold text-stone-900 text-sm">{item.item}</p>
-                  <p className="text-[10px] font-black text-stone-400 uppercase">Vol: {item.volume_per_unit} ft³</p>
+                  <p className="text-[10px] font-black text-stone-400 uppercase">Vol: {item.volume_per_unit} ft³ • Sources: {sourceCount}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -29,8 +31,9 @@ export default function InventoryList({ activeRoom, updateQuantity, loading }: I
                 <span className="font-black text-sm w-4 text-center">{item.quantity}</span>
                 <button onClick={() => updateQuantity(activeRoom.id, idx, 1)} className="w-6 h-6 rounded-full bg-white border flex items-center justify-center text-xs shadow-sm">+</button>
               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
           {!loading && activeRoom.inventory.length === 0 && (
             <div className="text-center py-10">
               <Box className="mx-auto text-stone-200 mb-2" size={32} />

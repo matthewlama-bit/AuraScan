@@ -39,8 +39,8 @@ export function useFileUpload(updateActiveRoom: (updates: Partial<Room>) => void
       });
     }
 
-    // Update UI with the first image
-    updateActiveRoom({ image: compressedImages[0] });
+    // Update UI with the first image and store all compressed images
+    updateActiveRoom({ image: compressedImages[0], images: compressedImages });
 
     try {
       const response = await fetch('/api/analyze', {
