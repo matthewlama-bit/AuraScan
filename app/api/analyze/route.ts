@@ -12,7 +12,7 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { images } = await req.json(); // Now expects an array of base64 images
+    const { images, imageOffset = 0 } = await req.json(); // Now expects an array of base64 images + optional offset
 
     // To make multi-image scanning reliable across SDK/formatting differences,
     // analyze each image individually and merge results server-side.
@@ -20,6 +20,7 @@ export async function POST(req: Request) {
 
     for (let i = 0; i < images.length; i++) {
       const img = images[i];
+      const globalImageIndex = imageOffset + i; // Offset for multi-batch uploads
       const opts = {
         model: "gpt-4o",
         temperature: 0,
@@ -51,8 +52,8 @@ export async function POST(req: Request) {
       }
 
       const items: any[] = Array.isArray(parsed.items) ? parsed.items : [];
-      // Attach source index so downstream code can choose how to draw boxes
-      const annotated = items.map(it => ({ ...it, _source_image: i }));
+      // Attach source index so downstream code can choose how to draw boxes (use global index for multi-batch uploads)
+      const annotated = items.map(it => ({ ...it, _source_image: globalImageIndex }));
       perImageResults.push(annotated);
     }
 

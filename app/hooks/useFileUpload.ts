@@ -46,7 +46,7 @@ export function useFileUpload(updateActiveRoom: (updates: Partial<Room>) => void
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ images: compressedImages }),
+        body: JSON.stringify({ images: compressedImages, imageOffset: 0 }),
       });
 
       if (!response.ok) throw new Error(`Server error: ${response.status}`);
