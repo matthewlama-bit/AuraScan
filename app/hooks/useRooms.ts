@@ -10,7 +10,20 @@ export function useRooms() {
   const activeRoom = rooms.find(r => r.id === activeRoomId) || rooms[0];
 
   const updateActiveRoom = (updates: Partial<Room>) => {
-    setRooms(prev => prev.map(r => r.id === activeRoomId ? { ...r, ...updates } : r));
+    setRooms(prev => prev.map(r => {
+      if (r.id !== activeRoomId) return r;
+      // If caller provided `images`, append them to existing images array instead of replacing
+      const incomingImages = (updates as any).images as string[] | undefined;
+      const newImages = incomingImages ? ([...(r.images || []), ...incomingImages]) : r.images;
+
+      // Determine the `image` to display: prefer explicit updates.image, otherwise default to first of images
+      const incomingImage = (updates as any).image as string | undefined;
+      const newImage = incomingImage ?? (newImages && newImages.length ? newImages[0] : updates.image ?? r.image);
+
+      // Merge other fields normally
+      const { images: _imgs, image: _img, ...rest } = updates as any;
+      return { ...r, ...rest, images: newImages, image: newImage };
+    }));
   };
 
   const updateQuantity = (roomId: string, itemIndex: number, delta: number) => {
