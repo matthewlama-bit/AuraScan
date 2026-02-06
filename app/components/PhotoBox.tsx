@@ -10,6 +10,7 @@ interface PhotoBoxProps {
 
 export default function PhotoBox({ activeRoom, handleFileUpload, loading }: PhotoBoxProps) {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setSelectedIndex(0);
@@ -57,10 +58,36 @@ export default function PhotoBox({ activeRoom, handleFileUpload, loading }: Phot
             {/* IMAGE TOGGLE + RE-UPLOAD */}
             <div className="absolute bottom-4 right-4 flex items-center gap-2 z-20">
               {images.length > 1 && (
-                <div className="flex items-center bg-white/90 p-1 rounded-full shadow-sm">
-                  <button onClick={() => setSelectedIndex(Math.max(0, selectedIndex - 1))} className="p-1" aria-label="Prev image"><ChevronLeft size={16} /></button>
-                  <div className="px-2 text-xs font-black">{selectedIndex + 1}/{images.length}</div>
-                  <button onClick={() => setSelectedIndex(Math.min(images.length - 1, selectedIndex + 1))} className="p-1" aria-label="Next image"><ChevronRight size={16} /></button>
+                <div className="flex items-center bg-white/90 p-2 rounded-full shadow-sm gap-2">
+                  <div className="relative flex items-center gap-1 overflow-x-auto max-w-[220px]">
+                    {images.map((src, i) => (
+                      <button
+                        key={`thumb-${i}`}
+                        onClick={() => setSelectedIndex(i)}
+                        onMouseEnter={() => setHoverIndex(i)}
+                        onMouseLeave={() => setHoverIndex(null)}
+                        onFocus={() => setHoverIndex(i)}
+                        onBlur={() => setHoverIndex(null)}
+                        className={`w-10 h-10 rounded-md overflow-hidden border-2 ${i === selectedIndex ? 'border-cyan-600 ring-2 ring-cyan-200' : 'border-transparent'} shrink-0`}
+                        aria-label={`Select image ${i + 1}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={src} alt={`thumb-${i}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+
+                    {hoverIndex !== null && images[hoverIndex] && (
+                      <div className="absolute -top-24 right-0 w-40 h-24 rounded-md overflow-hidden shadow-lg z-30 hidden sm:block">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={images[hoverIndex]} alt={`preview-${hoverIndex}`} className="w-full h-full object-cover" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center bg-white/0 p-1 rounded">
+                    <button onClick={() => setSelectedIndex(Math.max(0, selectedIndex - 1))} className="p-1" aria-label="Prev image"><ChevronLeft size={16} /></button>
+                    <div className="px-2 text-xs font-black">{selectedIndex + 1}/{images.length}</div>
+                    <button onClick={() => setSelectedIndex(Math.min(images.length - 1, selectedIndex + 1))} className="p-1" aria-label="Next image"><ChevronRight size={16} /></button>
+                  </div>
                 </div>
               )}
               <label className="bg-white/90 p-3 rounded-full shadow-lg cursor-pointer">
