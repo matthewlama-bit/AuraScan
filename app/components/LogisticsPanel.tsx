@@ -1,6 +1,6 @@
 import { Truck, Package } from 'lucide-react';
 import { Room } from '../types';
-import { recommendVehiclesSummary, estimateMassKg } from '../utils/logistics';
+import { recommendVehiclesSummary, estimateMassKg, planLoadOut } from '../utils/logistics';
 
 interface LogisticsPanelProps {
   activeRoom: Room;
@@ -19,6 +19,23 @@ export default function LogisticsPanel({ activeRoom }: LogisticsPanelProps) {
   }
 
   const { vehicles, summary } = recommendVehiclesSummary(activeRoom.inventory);
+  const loadOutPlan = planLoadOut(activeRoom.inventory);
+        {/* Load Out Plan */}
+        <div className="mt-8">
+          <h4 className="text-xs font-black text-blue-700 uppercase tracking-wider mb-2">Load Out Plan</h4>
+          {loadOutPlan.map((vehicle, vIdx) => (
+            <div key={vIdx} className="mb-4">
+              <div className="font-bold text-blue-900 mb-1">{vehicle.type.name} #{vIdx + 1}</div>
+              <ol className="list-decimal ml-6 text-[10px] text-blue-800">
+                {vehicle.loadOrder.map((item, i) => (
+                  <li key={i} className="mb-0.5">
+                    <span className="font-semibold">{item.name}</span> ({item.volumeM3.toFixed(2)} m³, {item.massKg.toFixed(1)} kg)
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
 
   const totalItems = activeRoom.inventory.reduce((sum, it) => sum + (it.quantity || 1), 0);
   const totalMassKg = activeRoom.inventory.reduce((sum, it) => sum + estimateMassKg(it) * (it.quantity || 1), 0);

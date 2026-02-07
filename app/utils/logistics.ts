@@ -1,3 +1,22 @@
+// Recommend a load out plan for each vehicle: order items for optimal loading (heavy/big first, fragile last)
+export function planLoadOut(inventory: InventoryItem[], availableVehicles = VEHICLE_TYPES) {
+  const packed = planPacking(inventory, availableVehicles);
+  // For each vehicle, order items: heavy and large at the bottom, fragile/small at the top/last
+  // For now, we sort by mass*volume descending (proxy for "should be loaded first")
+  // Optionally, could add a fragile flag to InventoryItem in the future
+  return packed.map(vehicle => {
+    const ordered = [...vehicle.items].sort((a, b) => {
+      // Heavier and larger items first
+      const aScore = a.massKg * a.volumeM3;
+      const bScore = b.massKg * b.volumeM3;
+      return bScore - aScore;
+    });
+    return {
+      ...vehicle,
+      loadOrder: ordered,
+    };
+  });
+}
 import { InventoryItem } from '../types';
 
 // Convert cubic feet to cubic meters

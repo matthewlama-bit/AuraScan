@@ -1,6 +1,6 @@
 import { Truck, Package, MapPin } from 'lucide-react';
 import { Room } from '../types';
-import { recommendVehiclesSummary, estimateMassKg, aggregateInventories } from '../utils/logistics';
+import { recommendVehiclesSummary, estimateMassKg, aggregateInventories, planLoadOut } from '../utils/logistics';
 
 interface AggregatedLogisticsPanelProps {
   rooms: Room[];
@@ -23,6 +23,23 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
   }
 
   const { vehicles, summary } = recommendVehiclesSummary(aggregated);
+  const loadOutPlan = planLoadOut(aggregated);
+      {/* Load Out Plan */}
+      <div className="mt-8">
+        <h4 className="text-sm font-black text-blue-700 uppercase tracking-wider mb-2">Load Out Plan</h4>
+        {loadOutPlan.map((vehicle, vIdx) => (
+          <div key={vIdx} className="mb-4">
+            <div className="font-bold text-blue-900 mb-1">{vehicle.type.name} #{vIdx + 1}</div>
+            <ol className="list-decimal ml-6 text-[10px] text-blue-800">
+              {vehicle.loadOrder.map((item, i) => (
+                <li key={i} className="mb-0.5">
+                  <span className="font-semibold">{item.name}</span> ({item.volumeM3.toFixed(2)} m³, {item.massKg.toFixed(1)} kg)
+                </li>
+              ))}
+            </ol>
+          </div>
+        ))}
+      </div>
 
   const totalItems = aggregated.reduce((sum, it) => sum + (it.quantity || 1), 0);
   const totalMassKg = aggregated.reduce((sum, it) => sum + estimateMassKg(it) * (it.quantity || 1), 0);
