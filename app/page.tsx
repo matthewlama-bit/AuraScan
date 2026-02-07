@@ -47,7 +47,7 @@ export default function AuraMultiRoom() {
               <AggregatedLogisticsPanel rooms={rooms} />
             </div>
           ) : viewMode === 'unpack' ? (
-            <UnpackPanel />
+            <UnpackPanel rooms={rooms} />
           ) : (
             <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
               <PhotoBox activeRoom={activeRoom} handleFileUpload={handleFileUpload} loading={loading} hoveredItemIndex={hoveredItemIndex} />

@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
-import FloorPlanUpload from './FloorPlanUpload';
+import { Camera } from 'lucide-react';
+import { Room } from '../types';
 
 // Stepper workflow steps
 const steps = [
@@ -9,7 +10,11 @@ const steps = [
   'Drag & Drop Furniture',
 ];
 
-export default function UnpackPanel() {
+interface UnpackPanelProps {
+  rooms: Room[];
+}
+
+export default function UnpackPanel({ rooms }: UnpackPanelProps) {
   const [step, setStep] = useState(0);
   const [floorPlanUrl, setFloorPlanUrl] = useState<string | null>(null);
   const [floorPlanFile, setFloorPlanFile] = useState<File | null>(null);
@@ -90,7 +95,30 @@ export default function UnpackPanel() {
       <Stepper />
       {step === 0 && (
         <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100">
-          <FloorPlanUpload onUpload={handleUpload} />
+          <div className="flex flex-col items-center">
+            <h3 className="text-xl font-black text-stone-900 uppercase tracking-widest mb-2">Upload Floor Plan</h3>
+            <p className="text-sm text-stone-500 mb-6">Upload an image of your floor plan to begin the unpacking process.</p>
+            <label className="flex flex-col items-center justify-center w-full aspect-video bg-stone-100 hover:bg-stone-200 transition-colors rounded-[2rem] cursor-pointer border-4 border-dashed border-stone-300">
+              <div className="bg-white p-6 rounded-full shadow-sm mb-4">
+                <Camera size={48} className="text-stone-300 pointer-events-none" />
+              </div>
+              <p className="text-sm font-black text-stone-500 uppercase tracking-widest">Upload Floor Plan Image</p>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const url = URL.createObjectURL(file);
+                    setFloorPlanFile(file);
+                    setFloorPlanUrl(url);
+                    setStep(1);
+                  }
+                }}
+                className="hidden"
+              />
+            </label>
+          </div>
         </div>
       )}
       {step === 1 && floorPlanUrl && (
@@ -101,11 +129,13 @@ export default function UnpackPanel() {
             <label htmlFor="room-select" className="text-sm font-bold text-stone-700 mb-2">Select Room:</label>
             <select id="room-select" value={selectedRoom} onChange={handleRoomChange} className="border border-stone-300 rounded px-4 py-2 mb-2">
               <option value="">-- Select Room --</option>
-              <option value="living-room">Living Room</option>
-              <option value="kitchen">Kitchen</option>
-              <option value="bedroom">Bedroom</option>
+              {rooms.map((room) => (
+                <option key={room.id} value={room.id}>
+                  {room.name}
+                </option>
+              ))}
             </select>
-            {selectedRoom && <p className="text-sm text-stone-700">Selected Room: {selectedRoom}</p>}
+            {selectedRoom && <p className="text-sm text-stone-700">Selected Room: {rooms.find(r => r.id === selectedRoom)?.name}</p>}
           </div>
           
           {/* Overlay Container */}
