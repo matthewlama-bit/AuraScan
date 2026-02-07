@@ -12,6 +12,7 @@ import InventoryList from './components/InventoryList';
 
 export default function AuraMultiRoom() {
   const [viewMode, setViewMode] = useState<ViewMode>("survey");
+  const [hoveredItemIndex, setHoveredItemIndex] = useState<number | null>(null);
 
   const {
     rooms,
@@ -40,8 +41,8 @@ export default function AuraMultiRoom() {
 
         <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-white/50">
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-            <PhotoBox activeRoom={activeRoom} handleFileUpload={handleFileUpload} loading={loading} />
-            <InventoryList activeRoom={activeRoom} updateQuantity={updateQuantity} loading={loading} />
+            <PhotoBox activeRoom={activeRoom} handleFileUpload={handleFileUpload} loading={loading} hoveredItemIndex={hoveredItemIndex} />
+            <InventoryList activeRoom={activeRoom} updateQuantity={updateQuantity} loading={loading} hoveredItemIndex={hoveredItemIndex} setHoveredItemIndex={setHoveredItemIndex} />
           </div>
         </main>
       </div>

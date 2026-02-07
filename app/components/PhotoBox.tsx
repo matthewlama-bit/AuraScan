@@ -6,9 +6,11 @@ interface PhotoBoxProps {
   activeRoom: Room;
   handleFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   loading: boolean;
+  hoveredItemIndex?: number | null;
 }
 
-export default function PhotoBox({ activeRoom, handleFileUpload, loading }: PhotoBoxProps) {
+export default function PhotoBox({ activeRoom, handleFileUpload, loading, hoveredItemIndex }: PhotoBoxProps) {
+  const hoveredIndexProp = hoveredItemIndex;
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
@@ -41,17 +43,29 @@ export default function PhotoBox({ activeRoom, handleFileUpload, loading }: Phot
                 else boxesForImage.push(item.box_2d as number[]);
               }
 
+              const isActive = hoveredIndexProp === idx;
               return boxesForImage.map((b, bi) => b ? (
-                <div
-                  key={`box-${idx}-${bi}`}
-                  className="absolute border-2 border-purple-500 bg-purple-500/20 rounded-md pointer-events-none"
-                  style={{
-                    top: `${b[0] / 10}%`,
-                    left: `${b[1] / 10}%`,
-                    height: `${(b[2] - b[0]) / 10}%`,
-                    width: `${(b[3] - b[1]) / 10}%`
-                  }}
-                />
+                <div key={`box-${idx}-${bi}`} className="absolute">
+                  <div
+                    className={`absolute rounded-md pointer-events-none transition-all duration-200 ease-in-out ${isActive ? 'border-4 border-cyan-400 bg-cyan-500/30 z-20' : 'border-2 border-purple-500 bg-purple-500/20 opacity-40 z-10'}`}
+                    style={{
+                      top: `${b[0] / 10}%`,
+                      left: `${b[1] / 10}%`,
+                      height: `${(b[2] - b[0]) / 10}%`,
+                      width: `${(b[3] - b[1]) / 10}%`
+                    }}
+                  />
+
+                  {isActive && (
+                    <div
+                      className="absolute px-2 py-1 rounded-md bg-black text-white text-xs pointer-events-none z-30"
+                      style={{ top: `${b[0] / 10}%`, left: `${b[1] / 10}%`, transform: 'translateY(-1.25rem)' }}
+                    >
+                      <div className="font-bold">{item.item}</div>
+                      <div className="text-[11px] opacity-80">Vol: {item.volume_per_unit}</div>
+                    </div>
+                  )}
+                </div>
               ) : null);
             })}
 

@@ -5,9 +5,11 @@ interface InventoryListProps {
   activeRoom: Room;
   updateQuantity: (roomId: string, itemIndex: number, delta: number) => void;
   loading: boolean;
+  hoveredItemIndex?: number | null;
+  setHoveredItemIndex?: (index: number | null) => void;
 }
 
-export default function InventoryList({ activeRoom, updateQuantity, loading }: InventoryListProps) {
+export default function InventoryList({ activeRoom, updateQuantity, loading, hoveredItemIndex, setHoveredItemIndex }: InventoryListProps) {
   return (
     <div className="lg:col-span-5">
       <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100 min-h-[300px]">
@@ -15,8 +17,15 @@ export default function InventoryList({ activeRoom, updateQuantity, loading }: I
         <div className="space-y-3">
           {activeRoom.inventory.map((item, idx) => {
             const sourceCount = Array.isArray(item.box_2d) && Array.isArray(item.box_2d[0]) ? (item.box_2d as any[]).length : (item.box_2d ? 1 : 0);
+            const isActive = hoveredItemIndex === idx;
             return (
-            <div key={idx} className="flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-200">
+            <div
+              key={idx}
+              onMouseEnter={() => setHoveredItemIndex?.(idx)}
+              onMouseLeave={() => setHoveredItemIndex?.(null)}
+              onClick={() => setHoveredItemIndex?.(hoveredItemIndex === idx ? null : idx)}
+              className={`flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-200 ${isActive ? 'ring-2 ring-cyan-200' : ''}`}
+            >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-cyan-600 text-xs">
                   {item.item.substring(0, 1)}
