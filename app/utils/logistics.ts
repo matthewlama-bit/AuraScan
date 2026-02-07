@@ -19,23 +19,28 @@ export const VEHICLE_TYPES: VehicleType[] = [
 
 // Heuristic densities (kg per m3) for common furniture types. These are estimates
 // used to infer mass from volume. We allow simple keyword matching on the item name.
+// Note: Furniture is often quite dense due to wood, upholstery, metal frames, and padding.
 const DENSITY_OVERRIDES: Record<string, number> = {
-  sofa: 60,
-  couch: 60,
-  mattress: 30,
-  bed: 80,
-  chair: 80,
-  table: 120,
-  dresser: 120,
-  cabinet: 200,
-  lamp: 15,
-  'small-box': 25,
-  tv: 40,
-  television: 40,
-  rug: 10,
+  sofa: 250,      // sofas are dense with wood frame, springs, padding, upholstery
+  couch: 250,
+  sectional: 250,
+  mattress: 150,  // mattresses have springs and padding
+  bed: 200,       // bed frames are heavy
+  chair: 200,     // upholstered chairs with wood/metal frames
+  ottoman: 200,
+  table: 350,     // tables (dining, coffee) are solid wood/metal and heavy
+  desk: 350,
+  dresser: 400,   // dressers are heavy solid wood
+  cabinet: 350,   // cabinets are dense
+  bookshelf: 400, // loaded or empty, fairly heavy
+  tv: 80,         // TVs are relatively light
+  television: 80,
+  lamp: 30,       // lamps are light
+  rug: 50,        // rugs/carpets
+  'box': 100,     // generic boxes
 };
 
-const DEFAULT_DENSITY_KG_M3 = 100; // generic furniture density
+const DEFAULT_DENSITY_KG_M3 = 150; // increased default for generic furniture
 
 function inferDensityKgPerM3(name?: string) {
   if (!name) return DEFAULT_DENSITY_KG_M3;
@@ -137,6 +142,26 @@ export function recommendVehiclesSummary(inventory: InventoryItem[]) {
     totalMassKg: Number(v.totalMassKg.toFixed(1)),
   }));
   return { vehicles, summary };
+}
+
+// Aggregate inventory across multiple room inventories
+export function aggregateInventories(roomInventories: InventoryItem[][]): InventoryItem[] {
+  const map = new Map<string, InventoryItem>();
+  const normalize = (s: string) => (s || '').toString().trim().toLowerCase();
+
+  for (const inventory of roomInventories) {
+    for (const it of inventory) {
+      const key = normalize(it.item);
+      if (!map.has(key)) {
+        map.set(key, { ...it });
+      } else {
+        const existing = map.get(key)!;
+        existing.quantity = (existing.quantity || 1) + (it.quantity || 1);
+      }
+    }
+  }
+
+  return Array.from(map.values());
 }
 
 // Example usage (for debugging):

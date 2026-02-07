@@ -17,4 +17,4 @@ export interface Room {
   inventory: InventoryItem[];
 }
 
-export type ViewMode = "survey" | "unpack";
+export type ViewMode = "survey" | "unpack" | "logistics";
