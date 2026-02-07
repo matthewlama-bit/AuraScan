@@ -54,11 +54,64 @@ export function useFileUpload(updateActiveRoom: (updates: Partial<Room>) => void
 
       const data = await response.json();
       if (data.items) {
-        const itemsWithQty = data.items.map((item: { item: string; quantity?: number; volume_per_unit: number; box_2d?: number[] }) => ({
-          ...item,
-          quantity: item.quantity || 1
-        }));
-        updateActiveRoom({ inventory: itemsWithQty });
+        const incoming = data.items.map((item: any) => ({ ...item, quantity: item.quantity || 1 }));
+
+        // Merge incoming items with existing inventory by normalized item name
+        const existing = activeRoom?.inventory || [];
+        const map = new Map<string, any>();
+
+        const normalize = (s: string) => (s || '').toString().trim().toLowerCase();
+
+        // Seed map with existing items
+        for (const it of existing) {
+          const key = normalize(it.item);
+          // normalize box_2d to array of boxes
+          const boxes: number[][] = [];
+          if (it.box_2d) {
+            if (Array.isArray(it.box_2d[0])) boxes.push(...(it.box_2d as number[][]));
+            else boxes.push(it.box_2d as number[]);
+          }
+          map.set(key, { ...it, box_2d: boxes, sources: Array.isArray(it.sources) ? [...it.sources] : [] });
+        }
+
+        // Merge incoming
+        for (const it of incoming) {
+          const key = normalize(it.item || it.name || '');
+          const incomingBoxes: number[][] = [];
+          if (it.box_2d) {
+            if (Array.isArray(it.box_2d[0])) incomingBoxes.push(...(it.box_2d as number[][]));
+            else incomingBoxes.push(it.box_2d as number[]);
+          }
+          const incomingSources = Array.isArray(it.sources) ? [...it.sources] : [];
+
+          if (!map.has(key)) {
+            map.set(key, { ...it, box_2d: incomingBoxes, sources: incomingSources });
+          } else {
+            const existingEntry = map.get(key);
+            // sum quantities
+            existingEntry.quantity = (existingEntry.quantity || 0) + (it.quantity || 0);
+            // merge boxes
+            existingEntry.box_2d = (existingEntry.box_2d || []).concat(incomingBoxes);
+            // merge sources, avoid exact duplicate image+box combos
+            const seen = new Set((existingEntry.sources || []).map((s: any) => `${s.image}_${JSON.stringify(s.box||null)}`));
+            for (const s of incomingSources) {
+              const id = `${s.image}_${JSON.stringify(s.box||null)}`;
+              if (!seen.has(id)) {
+                existingEntry.sources.push(s);
+                seen.add(id);
+              }
+            }
+            map.set(key, existingEntry);
+          }
+        }
+
+        const merged = Array.from(map.values()).map((it: any) => {
+          // if only one box, keep as single array; if multiple, keep as array of boxes
+          const boxes = it.box_2d || [];
+          return { ...it, box_2d: boxes.length === 1 ? boxes[0] : boxes };
+        });
+
+        updateActiveRoom({ inventory: merged });
       }
     } catch (error) {
       console.error("Scan failed:", error);
