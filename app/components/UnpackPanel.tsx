@@ -26,14 +26,17 @@ export default function UnpackPanel() {
   // Stepper UI
   function Stepper() {
     return (
-      <div className="flex items-center justify-center gap-4 mb-6">
-        {steps.map((label, idx) => (
-          <div key={idx} className="flex items-center">
-            <div className={`w-6 h-6 flex items-center justify-center rounded-full font-bold text-xs ${step === idx ? 'bg-blue-500 text-white' : 'bg-stone-200 text-stone-500'}`}>{idx + 1}</div>
-            <div className={`ml-2 text-sm font-semibold ${step === idx ? 'text-blue-700' : 'text-stone-500'}`}>{label}</div>
-            {idx < steps.length - 1 && <div className="mx-2 w-8 h-1 bg-stone-300 rounded" />}
-          </div>
-        ))}
+      <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100 mb-6 flex flex-col items-center">
+        <h2 className="text-xl font-black text-stone-900 uppercase tracking-widest mb-4">Unpack Workflow</h2>
+        <div className="flex items-center justify-center gap-4">
+          {steps.map((label, idx) => (
+            <div key={idx} className="flex items-center">
+              <div className={`w-8 h-8 flex items-center justify-center rounded-full font-black text-base ${step === idx ? 'bg-blue-500 text-white' : 'bg-stone-200 text-stone-500'} border-2 ${step === idx ? 'border-blue-500' : 'border-stone-200'}`}>{idx + 1}</div>
+              <div className={`ml-2 text-sm font-black uppercase tracking-wider ${step === idx ? 'text-blue-700' : 'text-stone-500'}`}>{label}</div>
+              {idx < steps.length - 1 && <div className="mx-2 w-8 h-1 bg-stone-300 rounded" />}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

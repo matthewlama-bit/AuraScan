@@ -38,12 +38,7 @@ export default function AuraMultiRoom() {
   return (
     <div className="min-h-screen bg-[#fcfaf7] flex flex-col font-sans text-stone-900 overflow-x-hidden">
       <Header viewMode={viewMode} setViewMode={setViewMode} totalQuote={totalQuote} />
-      {/* TEMP: Add a button to switch to unpack mode for demo */}
-      <div className="flex gap-2 p-2 bg-white border-b border-stone-200">
-        <button className={`px-3 py-1 rounded ${viewMode === 'survey' ? 'bg-blue-100' : ''}`} onClick={() => setViewMode('survey')}>Survey</button>
-        <button className={`px-3 py-1 rounded ${viewMode === 'logistics' ? 'bg-blue-100' : ''}`} onClick={() => setViewMode('logistics')}>Logistics</button>
-        <button className={`px-3 py-1 rounded ${viewMode === 'unpack' ? 'bg-blue-100' : ''}`} onClick={() => setViewMode('unpack')}>Unpack</button>
-      </div>
+      // ...existing code...
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {viewMode !== 'logistics' && viewMode !== 'unpack' && <Sidebar rooms={rooms} activeRoomId={activeRoomId} setActiveRoomId={setActiveRoomId} addRoom={addRoom} updateActiveRoom={updateActiveRoom} />}
         <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-white/50">
