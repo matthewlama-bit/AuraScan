@@ -15,6 +15,8 @@ export interface Room {
   images?: string[];
   targetImage: string | null;
   inventory: InventoryItem[];
+  // whether the current room name was auto-inferred and not yet accepted
+  autoName?: boolean;
 }
 
 export type ViewMode = "survey" | "unpack" | "logistics";

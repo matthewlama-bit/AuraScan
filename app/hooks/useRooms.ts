@@ -26,13 +26,19 @@ export function useRooms() {
 
       // If inventory was provided, infer a room name unless an explicit name was passed
       let finalName = r.name;
-      if (incomingName) finalName = incomingName;
-      else if ((rest as any).inventory) {
+      let autoNameFlag = r.autoName || false;
+      if (incomingName) {
+        finalName = incomingName;
+        autoNameFlag = false; // explicit name overrides auto-name
+      } else if ((rest as any).inventory) {
         const inferred = inferRoomName((rest as any).inventory as any[]);
-        if (inferred) finalName = inferred;
+        if (inferred) {
+          finalName = inferred;
+          autoNameFlag = true;
+        }
       }
 
-      return { ...r, ...rest, images: newImages, image: newImage, name: finalName };
+      return { ...r, ...rest, images: newImages, image: newImage, name: finalName, autoName: autoNameFlag };
     }));
   };
 
