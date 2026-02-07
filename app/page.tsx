@@ -9,6 +9,7 @@ import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import PhotoBox from './components/PhotoBox';
 import InventoryList from './components/InventoryList';
+import LogisticsPanel from './components/LogisticsPanel';
 
 export default function AuraMultiRoom() {
   const [viewMode, setViewMode] = useState<ViewMode>("survey");
@@ -43,6 +44,7 @@ export default function AuraMultiRoom() {
           <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
             <PhotoBox activeRoom={activeRoom} handleFileUpload={handleFileUpload} loading={loading} hoveredItemIndex={hoveredItemIndex} />
             <InventoryList activeRoom={activeRoom} updateQuantity={updateQuantity} loading={loading} hoveredItemIndex={hoveredItemIndex} setHoveredItemIndex={setHoveredItemIndex} />
+            {activeRoom && activeRoom.inventory.length > 0 && <LogisticsPanel activeRoom={activeRoom} />}
           </div>
         </main>
       </div>
