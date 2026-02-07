@@ -167,3 +167,41 @@ export function aggregateInventories(roomInventories: InventoryItem[][]): Invent
 // Example usage (for debugging):
 // const { vehicles, summary } = recommendVehiclesSummary(room.inventory);
 // console.log(summary);
+
+// Infer a room name from inventory items using keyword scoring
+export function inferRoomName(inventory: InventoryItem[]): string | null {
+  if (!inventory || inventory.length === 0) return null;
+  const scores: Record<string, number> = {};
+
+  const categories: Record<string, string[]> = {
+    'Bedroom': ['bed', 'mattress', 'dresser', 'nightstand', 'wardrobe'],
+    'Living Room': ['sofa', 'couch', 'tv', 'television', 'coffee table', 'armchair', 'sectional'],
+    'Kitchen': ['fridge', 'refrigerator', 'oven', 'stove', 'microwave', 'kitchen', 'cabinet'],
+    'Dining Room': ['dining table', 'dining', 'chair', 'table'],
+    'Office': ['desk', 'bookshelf', 'bookcase', 'monitor', 'chair', 'office'],
+    'Bathroom': ['toilet', 'sink', 'bathtub', 'shower', 'vanity', 'bathroom'],
+    'Garage': ['tool', 'bike', 'ladder', 'toolbox', 'garage'],
+    'Storage': ['box', 'crate', 'storage', 'suitcase'],
+  };
+
+  const normalize = (s: string) => (s || '').toLowerCase();
+
+  for (const it of inventory) {
+    const name = normalize(it.item || '');
+    for (const cat of Object.keys(categories)) {
+      for (const kw of categories[cat]) {
+        if (name.includes(kw)) {
+          scores[cat] = (scores[cat] || 0) + 1;
+        }
+      }
+    }
+  }
+
+  const entries = Object.entries(scores);
+  if (entries.length === 0) return null;
+  entries.sort((a, b) => b[1] - a[1]);
+  const top = entries[0];
+  // require at least one match and clear winner (or accept tie with top score)
+  if (!top) return null;
+  return top[0];
+}

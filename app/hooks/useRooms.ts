@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Room } from '../types';
+import { inferRoomName } from '../utils/logistics';
 
 export function useRooms() {
   const [rooms, setRooms] = useState<Room[]>([
@@ -21,8 +22,17 @@ export function useRooms() {
       const newImage = incomingImage ?? (newImages && newImages.length ? newImages[0] : updates.image ?? r.image);
 
       // Merge other fields normally
-      const { images: _imgs, image: _img, ...rest } = updates as any;
-      return { ...r, ...rest, images: newImages, image: newImage };
+      const { images: _imgs, image: _img, name: incomingName, ...rest } = updates as any;
+
+      // If inventory was provided, infer a room name unless an explicit name was passed
+      let finalName = r.name;
+      if (incomingName) finalName = incomingName;
+      else if ((rest as any).inventory) {
+        const inferred = inferRoomName((rest as any).inventory as any[]);
+        if (inferred) finalName = inferred;
+      }
+
+      return { ...r, ...rest, images: newImages, image: newImage, name: finalName };
     }));
   };
 
