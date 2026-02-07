@@ -31,10 +31,15 @@ export default function PhotoBox({ activeRoom, handleFileUpload, loading, hovere
 
             {/* DRAWING BOXES (show boxes only for selected image when sources are present) */}
             {activeRoom.inventory.map((item, idx) => {
+              const isActive = hoveredIndexProp === idx;
+              
+              // When active, show any box from this item (any image); otherwise show only from current image
               const boxesForImage: (number[] | undefined)[] = [];
               if (item.sources && Array.isArray(item.sources)) {
                 for (const s of item.sources) {
-                  if (s.image === selectedIndex && s.box) boxesForImage.push(s.box as number[]);
+                  if ((isActive || s.image === selectedIndex) && s.box) {
+                    boxesForImage.push(s.box as number[]);
+                  }
                 }
               }
               if (boxesForImage.length === 0 && item.box_2d) {
@@ -43,7 +48,6 @@ export default function PhotoBox({ activeRoom, handleFileUpload, loading, hovere
                 else boxesForImage.push(item.box_2d as number[]);
               }
 
-              const isActive = hoveredIndexProp === idx;
               return boxesForImage.map((b, bi) => b ? (
                 <div key={`box-${idx}-${bi}`} className="absolute">
                   <div
