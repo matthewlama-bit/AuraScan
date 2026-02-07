@@ -42,33 +42,35 @@ export default function UnpackPanel() {
   }
 
   return (
-    <div className="w-full max-w-3xl mx-auto space-y-6">
+    <div className="w-full max-w-6xl mx-auto space-y-6">
       <Stepper />
       {step === 0 && (
-        <FloorPlanUpload onUpload={handleUpload} />
+        <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100">
+          <FloorPlanUpload onUpload={handleUpload} />
+        </div>
       )}
       {step === 1 && floorPlanUrl && (
-        <div className="bg-white rounded-xl p-6 border border-stone-200 flex flex-col items-center">
+        <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100 flex flex-col items-center">
           <img src={floorPlanUrl} alt="Floor plan preview" className="max-w-full max-h-96 rounded shadow mb-4" />
-          <h3 className="font-bold text-stone-900 mb-2">Define Rooms</h3>
+          <h3 className="text-xl font-black text-stone-900 uppercase tracking-widest mb-2">Define Rooms</h3>
           <p className="text-sm text-stone-500 mb-4">Select a room from the survey, then draw its area on the floor plan.</p>
           {/* TODO: Room dropdown and area drawing UI */}
-          <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded" onClick={() => setStep(2)}>Next: AI Mapping</button>
+          <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-xl font-bold shadow" onClick={() => setStep(2)}>Next: AI Mapping</button>
         </div>
       )}
       {step === 2 && floorPlanUrl && (
-        <div className="bg-white rounded-xl p-6 border border-stone-200 flex flex-col items-center">
+        <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100 flex flex-col items-center">
           <img src={floorPlanUrl} alt="Floor plan preview" className="max-w-full max-h-96 rounded shadow mb-4" />
-          <h3 className="font-bold text-stone-900 mb-2">AI Furniture Mapping</h3>
+          <h3 className="text-xl font-black text-stone-900 uppercase tracking-widest mb-2">AI Furniture Mapping</h3>
           <p className="text-sm text-stone-500 mb-4">Furniture from the survey will be mapped to rooms automatically.</p>
           {/* TODO: AI mapping logic and preview UI */}
-          <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded" onClick={() => setStep(3)}>Next: Drag & Drop</button>
+          <button className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-xl font-bold shadow" onClick={() => setStep(3)}>Next: Drag & Drop</button>
         </div>
       )}
       {step === 3 && floorPlanUrl && (
-        <div className="bg-white rounded-xl p-6 border border-stone-200 flex flex-col items-center">
+        <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100 flex flex-col items-center">
           <img src={floorPlanUrl} alt="Floor plan preview" className="max-w-full max-h-96 rounded shadow mb-4" />
-          <h3 className="font-bold text-stone-900 mb-2">Drag & Drop Furniture</h3>
+          <h3 className="text-xl font-black text-stone-900 uppercase tracking-widest mb-2">Drag & Drop Furniture</h3>
           <p className="text-sm text-stone-500 mb-4">Move furniture to your preferred locations within each room.</p>
           {/* TODO: Drag-and-drop UI for furniture placement */}
         </div>

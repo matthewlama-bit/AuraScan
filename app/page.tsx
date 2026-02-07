@@ -38,7 +38,7 @@ export default function AuraMultiRoom() {
   return (
     <div className="min-h-screen bg-[#fcfaf7] flex flex-col font-sans text-stone-900 overflow-x-hidden">
       <Header viewMode={viewMode} setViewMode={setViewMode} totalQuote={totalQuote} />
-      // ...existing code...
+      
       <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
         {viewMode !== 'logistics' && viewMode !== 'unpack' && <Sidebar rooms={rooms} activeRoomId={activeRoomId} setActiveRoomId={setActiveRoomId} addRoom={addRoom} updateActiveRoom={updateActiveRoom} />}
         <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-white/50">
