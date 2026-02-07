@@ -24,7 +24,7 @@ export default function InventoryList({ activeRoom, updateQuantity, loading, hov
               onMouseEnter={() => setHoveredItemIndex?.(idx)}
               onMouseLeave={() => setHoveredItemIndex?.(null)}
               onClick={() => setHoveredItemIndex?.(hoveredItemIndex === idx ? null : idx)}
-              className={`flex items-center justify-between p-4 bg-stone-50 rounded-2xl border border-stone-200 ${isActive ? 'ring-2 ring-cyan-200' : ''}`}
+              className={`flex items-center justify-between p-4 rounded-2xl border border-stone-200 cursor-pointer ${isActive ? 'ring-2 ring-cyan-200 bg-cyan-50 sm:bg-stone-50' : 'bg-stone-50'}`}
             >
               <div className="flex items-center gap-4">
                 <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center shadow-sm font-black text-cyan-600 text-xs">
