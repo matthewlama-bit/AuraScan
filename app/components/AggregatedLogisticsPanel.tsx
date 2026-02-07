@@ -78,36 +78,26 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                   {/* Draw cargo area outline */}
                   <rect x={0} y={0} width={vehicle.cargoWidth} height={vehicle.cargoLength} fill="#e0f2fe" stroke="#60a5fa" strokeWidth={0.03} rx={0.1} />
                   {vehicle.loadOrder.map((item, i) => (
-                    <g key={i}>
-                      <rect
-                        x={item.x}
-                        y={item.y}
-                        width={item.width}
-                        height={item.length}
-                        fill="#38bdf8"
-                        stroke="#0ea5e9"
-                        strokeWidth={0.02}
-                        rx={0.04}
-                        opacity={0.85}
-                      />
-                      <text
-                        x={item.x + item.width / 2}
-                        y={item.y + item.length / 2}
-                        fontSize={0.13}
-                        textAnchor="middle"
-                        alignmentBaseline="middle"
-                        fill="#0e7490"
-                        style={{ pointerEvents: 'none', userSelect: 'none' }}
-                      >
-                        {item.name.length > 12 ? item.name.slice(0, 12) + '…' : item.name}
-                      </text>
-                    </g>
+                    <rect
+                      key={i}
+                      x={item.x}
+                      y={item.y}
+                      width={item.width}
+                      height={item.length}
+                      fill="#38bdf8"
+                      stroke="#0ea5e9"
+                      strokeWidth={0.02}
+                      rx={0.04}
+                      opacity={0.85}
+                    />
                   ))}
                 </svg>
               </div>
+              {/* Legend for item names and details */}
               <ol className="list-decimal ml-6 text-[10px] text-blue-800 mt-2">
                 {vehicle.loadOrder.map((item, i) => (
-                  <li key={i} className="mb-0.5">
+                  <li key={i} className="mb-0.5 flex items-center gap-2">
+                    <span className="inline-block w-3 h-3 rounded-sm" style={{ background: '#38bdf8', border: '1px solid #0ea5e9' }}></span>
                     <span className="font-semibold">{item.name}</span> ({item.volumeM3.toFixed(2)} m³, {item.massKg.toFixed(1)} kg)
                   </li>
                 ))}
