@@ -115,55 +115,55 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
             </div>
           ))}
         </div>
+        {/* Aggregated Inventory Breakdown by Room */}
+        <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100">
+          <h3 className="text-sm font-black text-stone-700 uppercase tracking-wider mb-4">Room-by-Room Summary</h3>
+          <div className="space-y-3">
+            {rooms.map((room) => {
+              const roomTotal = room.inventory.reduce((sum, it) => sum + estimateMassKg(it) * (it.quantity || 1), 0);
+              const roomVolume = room.inventory.reduce((sum, it) => sum + (it.volume_per_unit || 0) * 0.0283168 * (it.quantity || 1), 0);
+              const roomItems = room.inventory.reduce((sum, it) => sum + (it.quantity || 1), 0);
 
-      {/* Aggregated Inventory Breakdown by Room */}
-      <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100">
-        <h3 className="text-sm font-black text-stone-700 uppercase tracking-wider mb-4">Room-by-Room Summary</h3>
-        <div className="space-y-3">
-          {rooms.map((room) => {
-            const roomTotal = room.inventory.reduce((sum, it) => sum + estimateMassKg(it) * (it.quantity || 1), 0);
-            const roomVolume = room.inventory.reduce((sum, it) => sum + (it.volume_per_unit || 0) * 0.0283168 * (it.quantity || 1), 0);
-            const roomItems = room.inventory.reduce((sum, it) => sum + (it.quantity || 1), 0);
-
-            return (
-              <div key={room.id} className="bg-stone-50 rounded-xl p-4 border border-stone-200">
-                <div className="flex items-center gap-2 mb-2">
-                  <MapPin size={16} className="text-stone-500" />
-                  <p className="font-bold text-stone-900">{room.name}</p>
-                </div>
-                <div className="grid grid-cols-3 gap-3 text-[9px]">
-                  <div>
-                    <div className="text-stone-500 uppercase mb-1">Items</div>
-                    <div className="font-black text-stone-900">{roomItems}</div>
+              return (
+                <div key={room.id} className="bg-stone-50 rounded-xl p-4 border border-stone-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MapPin size={16} className="text-stone-500" />
+                    <p className="font-bold text-stone-900">{room.name}</p>
                   </div>
-                  <div>
-                    <div className="text-stone-500 uppercase mb-1">Volume</div>
-                    <div className="font-black text-stone-900">{roomVolume.toFixed(1)} m³</div>
-                  </div>
-                  <div>
-                    <div className="text-stone-500 uppercase mb-1">Weight</div>
-                    <div className="font-black text-stone-900">{roomTotal.toFixed(0)} kg</div>
+                  <div className="grid grid-cols-3 gap-3 text-[9px]">
+                    <div>
+                      <div className="text-stone-500 uppercase mb-1">Items</div>
+                      <div className="font-black text-stone-900">{roomItems}</div>
+                    </div>
+                    <div>
+                      <div className="text-stone-500 uppercase mb-1">Volume</div>
+                      <div className="font-black text-stone-900">{roomVolume.toFixed(1)} m³</div>
+                    </div>
+                    <div>
+                      <div className="text-stone-500 uppercase mb-1">Weight</div>
+                      <div className="font-black text-stone-900">{roomTotal.toFixed(0)} kg</div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* Logistics Tips */}
-      <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100">
-        <div className="flex gap-3">
-          <Package size={20} className="text-amber-600 shrink-0 mt-1" />
-          <div>
-            <p className="text-sm font-bold text-amber-900">Multi-Room Logistics Strategy</p>
-            <ul className="text-xs text-stone-700 mt-2 space-y-2">
-              <li>✓ <strong>Load by vehicle type:</strong> Smaller items go in smaller vans, larger items in box trucks</li>
-              <li>✓ <strong>Distribute by room:</strong> Keep items from the same room together if possible for unpacking efficiency</li>
-              <li>✓ <strong>Weight distribution:</strong> Place heavier items (sofas, tables) in the base; lighter items on top</li>
-              <li>✓ <strong>Trip optimization:</strong> Vehicles are planned to minimize the number of trips needed</li>
-              <li>✓ <strong>Unloading order:</strong> Load vehicles in reverse order of their destination room</li>
-            </ul>
+        {/* Logistics Tips */}
+        <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100">
+          <div className="flex gap-3">
+            <Package size={20} className="text-amber-600 shrink-0 mt-1" />
+            <div>
+              <p className="text-sm font-bold text-amber-900">Multi-Room Logistics Strategy</p>
+              <ul className="text-xs text-stone-700 mt-2 space-y-2">
+                <li>✓ <strong>Load by vehicle type:</strong> Smaller items go in smaller vans, larger items in box trucks</li>
+                <li>✓ <strong>Distribute by room:</strong> Keep items from the same room together if possible for unpacking efficiency</li>
+                <li>✓ <strong>Weight distribution:</strong> Place heavier items (sofas, tables) in the base; lighter items on top</li>
+                <li>✓ <strong>Trip optimization:</strong> Vehicles are planned to minimize the number of trips needed</li>
+                <li>✓ <strong>Unloading order:</strong> Load vehicles in reverse order of their destination room</li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
