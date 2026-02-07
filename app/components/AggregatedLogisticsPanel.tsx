@@ -29,7 +29,6 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
   const totalMassKg = aggregated.reduce((sum, it) => sum + estimateMassKg(it) * (it.quantity || 1), 0);
   const totalVolumeM3 = aggregated.reduce((sum, it) => sum + (it.volume_per_unit || 0) * 0.0283168 * (it.quantity || 1), 0);
 
-
   return (
     <div className="w-full space-y-6">
       <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100">
