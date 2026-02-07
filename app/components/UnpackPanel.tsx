@@ -75,14 +75,16 @@ export default function UnpackPanel({ rooms }: UnpackPanelProps) {
   // Stepper UI
   function Stepper() {
     return (
-      <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100 mb-6 flex flex-col items-center">
-        <h2 className="text-xl font-black text-stone-900 uppercase tracking-widest mb-4">Unpack Workflow</h2>
-        <div className="flex items-center justify-center gap-4">
+      <div className="bg-white rounded-[2rem] p-8 shadow-xl border border-stone-100 mb-6">
+        <h2 className="text-center text-lg font-black text-stone-900 uppercase tracking-widest mb-6">Unpack Workflow</h2>
+        <div className="flex items-center justify-center gap-2 flex-wrap">
           {steps.map((label, idx) => (
             <div key={idx} className="flex items-center">
-              <div className={`w-8 h-8 flex items-center justify-center rounded-full font-black text-base ${step === idx ? 'bg-blue-500 text-white' : 'bg-stone-200 text-stone-500'} border-2 ${step === idx ? 'border-blue-500' : 'border-stone-200'}`}>{idx + 1}</div>
-              <div className={`ml-2 text-sm font-black uppercase tracking-wider ${step === idx ? 'text-blue-700' : 'text-stone-500'}`}>{label}</div>
-              {idx < steps.length - 1 && <div className="mx-2 w-8 h-1 bg-stone-300 rounded" />}
+              <div className={`w-10 h-10 flex items-center justify-center rounded-full font-black text-sm transition-all ${step === idx ? 'bg-purple-600 text-white shadow-lg' : step > idx ? 'bg-purple-200 text-purple-600' : 'bg-stone-200 text-stone-500'}`}>
+                {step > idx ? '✓' : idx + 1}
+              </div>
+              <div className={`ml-2 text-xs font-black uppercase tracking-wider transition-all ${step === idx ? 'text-purple-600' : 'text-stone-400'}`}>{label}</div>
+              {idx < steps.length - 1 && <div className="mx-3 w-8 h-0.5 bg-stone-200 rounded" />}
             </div>
           ))}
         </div>
