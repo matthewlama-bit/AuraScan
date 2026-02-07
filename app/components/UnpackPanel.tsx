@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import FloorPlanUpload from './FloorPlanUpload';
 
 // Stepper workflow steps
@@ -16,11 +16,23 @@ export default function UnpackPanel() {
   const [selectedRoom, setSelectedRoom] = useState<string>('');
   const [drawingMode, setDrawingMode] = useState(false);
   const [drawnAreas, setDrawnAreas] = useState<any[]>([]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imageRef = useRef<HTMLImageElement>(null);
 
   function handleUpload(file: File, url: string) {
     setFloorPlanFile(file);
     setFloorPlanUrl(url);
     setStep(1);
+  }
+
+  function handleImageLoad() {
+    const img = imageRef.current;
+    const canvas = canvasRef.current;
+    if (!img || !canvas) return;
+
+    // Set canvas dimensions to match the image
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
   }
 
   function handleRoomChange(event: React.ChangeEvent<HTMLSelectElement>) {
@@ -31,12 +43,26 @@ export default function UnpackPanel() {
     setDrawingMode(!drawingMode);
   }
 
-  function handleCanvasClick(event: React.MouseEvent<HTMLDivElement>) {
+  function handleCanvasMouseDown(event: React.MouseEvent<HTMLCanvasElement>) {
     if (!drawingMode || !selectedRoom) return;
 
-    const rect = event.currentTarget.getBoundingClientRect();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
     const x = event.clientX - rect.left;
     const y = event.clientY - rect.top;
+
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.5)';
+    ctx.strokeStyle = '#0ea5e9';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, 2 * Math.PI);
+    ctx.fill();
+    ctx.stroke();
 
     setDrawnAreas([...drawnAreas, { room: selectedRoom, x, y }]);
   }
@@ -69,12 +95,11 @@ export default function UnpackPanel() {
       )}
       {step === 1 && floorPlanUrl && (
         <div className="bg-white rounded-[2rem] p-6 shadow-xl border border-stone-100 flex flex-col items-center">
-          <img src={floorPlanUrl} alt="Floor plan preview" className="max-w-full max-h-96 rounded shadow mb-4" />
           <h3 className="text-xl font-black text-stone-900 uppercase tracking-widest mb-2">Define Rooms</h3>
           <p className="text-sm text-stone-500 mb-4">Select a room from the survey, then draw its area on the floor plan.</p>
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center mb-4">
             <label htmlFor="room-select" className="text-sm font-bold text-stone-700 mb-2">Select Room:</label>
-            <select id="room-select" value={selectedRoom} onChange={handleRoomChange} className="border border-stone-300 rounded px-4 py-2 mb-4">
+            <select id="room-select" value={selectedRoom} onChange={handleRoomChange} className="border border-stone-300 rounded px-4 py-2 mb-2">
               <option value="">-- Select Room --</option>
               <option value="living-room">Living Room</option>
               <option value="kitchen">Kitchen</option>
@@ -82,26 +107,32 @@ export default function UnpackPanel() {
             </select>
             {selectedRoom && <p className="text-sm text-stone-700">Selected Room: {selectedRoom}</p>}
           </div>
-          <div
-            className="relative w-full h-96 bg-stone-100 border border-stone-300 rounded"
-            onClick={handleCanvasClick}
-          >
-            {drawnAreas.map((area, index) => (
-              <div
-                key={index}
-                className="absolute w-4 h-4 bg-blue-500 rounded-full"
-                style={{ left: area.x, top: area.y }}
-              />
-            ))}
+          
+          {/* Overlay Container */}
+          <div className="relative inline-block mb-4">
+            <img
+              ref={imageRef}
+              src={floorPlanUrl}
+              alt="Floor plan preview"
+              className="max-w-full max-h-96 rounded shadow"
+              onLoad={handleImageLoad}
+            />
+            <canvas
+              ref={canvasRef}
+              className="absolute top-0 left-0 rounded cursor-crosshair"
+              onMouseDown={handleCanvasMouseDown}
+              style={{ display: drawingMode ? 'block' : 'none' }}
+            />
           </div>
+
           <button
-            className={`mt-4 px-4 py-2 ${drawingMode ? 'bg-red-500' : 'bg-blue-500'} text-white rounded-xl font-bold shadow`}
+            className={`px-4 py-2 ${drawingMode ? 'bg-red-500' : 'bg-blue-500'} text-white rounded-xl font-bold shadow mb-4`}
             onClick={toggleDrawingMode}
           >
             {drawingMode ? 'Stop Drawing' : 'Start Drawing'}
           </button>
           <button
-            className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-xl font-bold shadow"
+            className="px-4 py-2 bg-blue-500 text-white rounded-xl font-bold shadow"
             onClick={() => setStep(2)}
           >
             Next: AI Mapping
