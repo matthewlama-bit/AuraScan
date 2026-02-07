@@ -20,13 +20,50 @@ export default function LogisticsPanel({ activeRoom }: LogisticsPanelProps) {
 
   const { vehicles, summary } = recommendVehiclesSummary(activeRoom.inventory);
   const loadOutPlan = planLoadOut(activeRoom.inventory);
-        {/* Load Out Plan */}
+        {/* Load Out Plan Visualization */}
         <div className="mt-8">
           <h4 className="text-xs font-black text-blue-700 uppercase tracking-wider mb-2">Load Out Plan</h4>
           {loadOutPlan.map((vehicle, vIdx) => (
-            <div key={vIdx} className="mb-4">
+            <div key={vIdx} className="mb-8">
               <div className="font-bold text-blue-900 mb-1">{vehicle.type.name} #{vIdx + 1}</div>
-              <ol className="list-decimal ml-6 text-[10px] text-blue-800">
+              <div className="overflow-x-auto">
+                <svg
+                  width={vehicle.cargoWidth * 120}
+                  height={vehicle.cargoLength * 120}
+                  viewBox={`0 0 ${vehicle.cargoWidth} ${vehicle.cargoLength}`}
+                  style={{ border: '1px solid #60a5fa', background: '#f0f9ff', borderRadius: 8 }}
+                >
+                  {/* Draw cargo area outline */}
+                  <rect x={0} y={0} width={vehicle.cargoWidth} height={vehicle.cargoLength} fill="#e0f2fe" stroke="#60a5fa" strokeWidth={0.03} rx={0.1} />
+                  {vehicle.loadOrder.map((item, i) => (
+                    <g key={i}>
+                      <rect
+                        x={item.x}
+                        y={item.y}
+                        width={item.width}
+                        height={item.length}
+                        fill="#38bdf8"
+                        stroke="#0ea5e9"
+                        strokeWidth={0.02}
+                        rx={0.04}
+                        opacity={0.85}
+                      />
+                      <text
+                        x={item.x + item.width / 2}
+                        y={item.y + item.length / 2}
+                        fontSize={0.13}
+                        textAnchor="middle"
+                        alignmentBaseline="middle"
+                        fill="#0e7490"
+                        style={{ pointerEvents: 'none', userSelect: 'none' }}
+                      >
+                        {item.name.length > 12 ? item.name.slice(0, 12) + '…' : item.name}
+                      </text>
+                    </g>
+                  ))}
+                </svg>
+              </div>
+              <ol className="list-decimal ml-6 text-[10px] text-blue-800 mt-2">
                 {vehicle.loadOrder.map((item, i) => (
                   <li key={i} className="mb-0.5">
                     <span className="font-semibold">{item.name}</span> ({item.volumeM3.toFixed(2)} m³, {item.massKg.toFixed(1)} kg)

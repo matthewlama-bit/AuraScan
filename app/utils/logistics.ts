@@ -1,19 +1,36 @@
 // Recommend a load out plan for each vehicle: order items for optimal loading (heavy/big first, fragile last)
+// For 2D placement, assume all items are rectangular and place them in rows (simple shelf algorithm)
 export function planLoadOut(inventory: InventoryItem[], availableVehicles = VEHICLE_TYPES) {
   const packed = planPacking(inventory, availableVehicles);
-  // For each vehicle, order items: heavy and large at the bottom, fragile/small at the top/last
-  // For now, we sort by mass*volume descending (proxy for "should be loaded first")
-  // Optionally, could add a fragile flag to InventoryItem in the future
+  // For each vehicle, assign (x, y, w, h) for each item in a 2D top-down plan
+  // We'll use a simple shelf-packing algorithm: fill left-to-right, then start a new row
   return packed.map(vehicle => {
-    const ordered = [...vehicle.items].sort((a, b) => {
-      // Heavier and larger items first
-      const aScore = a.massKg * a.volumeM3;
-      const bScore = b.massKg * b.volumeM3;
-      return bScore - aScore;
+    // Assume vehicle cargo area is 2m wide, length proportional to volume (approx)
+    const cargoWidth = 2; // meters
+    const cargoLength = Math.max(vehicle.type.maxVolumeM3 / cargoWidth, 2); // meters
+    // For each item, estimate width and length from volume (assume cubic, but cap width)
+    let x = 0, y = 0, rowHeight = 0;
+    const placed = vehicle.items.map((item, i) => {
+      // Estimate item width and length (try to keep width <= 1.2m)
+      const area = Math.max(item.volumeM3 / 1.2, 0.2); // m^2
+      const width = Math.min(Math.sqrt(area), 1.2);
+      const length = Math.max(item.volumeM3 / width, 0.2);
+      // If doesn't fit in row, move to next row
+      if (x + width > cargoWidth) {
+        x = 0;
+        y += rowHeight;
+        rowHeight = 0;
+      }
+      const pos = { x, y, width, length, name: item.name, massKg: item.massKg, volumeM3: item.volumeM3 };
+      x += width;
+      rowHeight = Math.max(rowHeight, length);
+      return pos;
     });
     return {
       ...vehicle,
-      loadOrder: ordered,
+      loadOrder: placed,
+      cargoWidth,
+      cargoLength,
     };
   });
 }
