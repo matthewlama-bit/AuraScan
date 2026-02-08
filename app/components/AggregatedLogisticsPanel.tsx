@@ -1,6 +1,6 @@
-import { Truck, Package, MapPin } from 'lucide-react';
+import { Truck, Package, MapPin, AlertTriangle, Shield, ShieldAlert } from 'lucide-react';
 import { Room } from '../types';
-import { recommendVehiclesSummary, estimateMassKg, aggregateInventories, planLoadOut } from '../utils/logistics';
+import { recommendVehiclesSummary, estimateMassKg, aggregateInventories, planLoadOut, inferCareLevel, CareLevel } from '../utils/logistics';
 
 // Distinct colors for items so each is visually distinguishable in the van
 const ITEM_COLORS = [
@@ -9,6 +9,13 @@ const ITEM_COLORS = [
   '#e879f9', '#38bdf8', '#4ade80', '#facc15', '#fb7185',
   '#22d3ee', '#c084fc', '#fdba74', '#86efac', '#fca5a5',
 ];
+
+const CARE_STYLES: Record<CareLevel, { label: string; border: string; dash: string; badge: string; badgeText: string; icon: string }> = {
+  'fragile':    { label: 'Fragile',     border: '#ef4444', dash: '6,3', badge: 'bg-red-100 text-red-700 border-red-300', badgeText: 'FRAGILE', icon: '⚠' },
+  'careful':    { label: 'Handle with care', border: '#f59e0b', dash: '4,4', badge: 'bg-amber-100 text-amber-700 border-amber-300', badgeText: 'CAREFUL', icon: '!' },
+  'standard':   { label: 'Standard',    border: '', dash: '', badge: '', badgeText: '', icon: '' },
+  'heavy-duty': { label: 'Heavy duty',  border: '#3b82f6', dash: '', badge: 'bg-blue-100 text-blue-700 border-blue-300', badgeText: 'HEAVY', icon: '▼' },
+};
 
 interface AggregatedLogisticsPanelProps {
   rooms: Room[];
@@ -138,6 +145,8 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                       const ry = 40 + item.y * scale;
                       const rw = item.width * scale;
                       const rh = item.length * scale;
+                      const care: CareLevel = item.care || 'standard';
+                      const cs = CARE_STYLES[care];
                       // Truncate label to fit
                       const maxChars = Math.max(2, Math.floor(rw / 7));
                       const label = item.name.length > maxChars ? item.name.slice(0, maxChars - 1) + '…' : item.name;
@@ -145,7 +154,9 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
 
                       return (
                         <g key={i}>
-                          <rect x={rx} y={ry} width={rw} height={rh} fill={color} stroke="rgba(0,0,0,0.3)" strokeWidth={1} rx={3} opacity={0.9} />
+                          {/* Item fill */}
+                          <rect x={rx} y={ry} width={rw} height={rh} fill={color} stroke={cs.border || 'rgba(0,0,0,0.3)'} strokeWidth={cs.border ? 2.5 : 1} strokeDasharray={cs.dash} rx={3} opacity={0.9} />
+                          {/* Label */}
                           {showLabel && (
                             <text x={rx + rw / 2} y={ry + rh / 2 + 1} textAnchor="middle" dominantBaseline="middle" fill="rgba(0,0,0,0.7)" fontSize={Math.min(11, rh * 0.6, rw * 0.25)} fontWeight="bold">
                               {label}
@@ -156,6 +167,15 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                           <text x={rx + 8} y={ry + 8} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={8} fontWeight="bold">
                             {i + 1}
                           </text>
+                          {/* Fragile / careful warning badge (top-right) */}
+                          {care !== 'standard' && rw > 20 && rh > 20 && (
+                            <>
+                              <circle cx={rx + rw - 8} cy={ry + 8} r={8} fill={cs.border} opacity={0.85} />
+                              <text x={rx + rw - 8} y={ry + 9} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={9} fontWeight="bold">
+                                {cs.icon}
+                              </text>
+                            </>
+                          )}
                         </g>
                       );
                     })}
@@ -173,11 +193,13 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
               </div>
 
               {/* Loading manifest / legend */}
-              <div className="lg:w-72 shrink-0">
+              <div className="lg:w-80 shrink-0">
                 <div className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-3">Loading Order (First → Last)</div>
                 <div className="space-y-1.5 max-h-[400px] overflow-y-auto pr-1">
                   {vehicle.loadOrder.map((item: any, i: number) => {
                     const color = ITEM_COLORS[i % ITEM_COLORS.length];
+                    const care: CareLevel = item.care || 'standard';
+                    const cs = CARE_STYLES[care];
                     return (
                       <div key={i} className="flex items-center gap-2 bg-stone-50 rounded-lg px-3 py-2 border border-stone-200">
                         <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black text-white shrink-0" style={{ backgroundColor: color }}>
@@ -187,10 +209,23 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                           <div className="text-xs font-black text-stone-900 truncate">{item.name}</div>
                           <div className="text-[9px] text-stone-500">{item.volumeM3.toFixed(2)} m³ · {item.massKg.toFixed(1)} kg</div>
                         </div>
-                        <div className="w-5 h-5 rounded-sm shrink-0" style={{ backgroundColor: color, opacity: 0.4 }} />
+                        {care !== 'standard' && (
+                          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border shrink-0 ${cs.badge}`}>{cs.badgeText}</span>
+                        )}
+                        <div className="w-5 h-5 rounded-sm shrink-0" style={{ backgroundColor: color, opacity: 0.4, border: cs.border ? `2px ${cs.dash ? 'dashed' : 'solid'} ${cs.border}` : undefined }} />
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Care level key */}
+                <div className="mt-4 pt-3 border-t border-stone-200">
+                  <div className="text-[9px] font-black text-stone-400 uppercase tracking-widest mb-2">Handling Key</div>
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2 text-[10px]"><span className="w-3 h-3 rounded-sm border-2 border-dashed border-red-500 bg-red-50 shrink-0" /> <span className="text-red-700 font-bold">Fragile</span> <span className="text-stone-400">— load last, offload first</span></div>
+                    <div className="flex items-center gap-2 text-[10px]"><span className="w-3 h-3 rounded-sm border-2 border-dashed border-amber-500 bg-amber-50 shrink-0" /> <span className="text-amber-700 font-bold">Careful</span> <span className="text-stone-400">— electronics, instruments</span></div>
+                    <div className="flex items-center gap-2 text-[10px]"><span className="w-3 h-3 rounded-sm border-2 border-blue-500 bg-blue-50 shrink-0" /> <span className="text-blue-700 font-bold">Heavy</span> <span className="text-stone-400">— secure against cab wall</span></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -239,10 +274,12 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
           <div>
             <p className="text-sm font-bold text-amber-900">Loading Crew Guide</p>
             <ul className="text-xs text-stone-700 mt-2 space-y-2">
-              <li>✓ <strong>Load numbered items in order</strong> — heaviest/largest items go in first (towards the cab)</li>
+              <li>✓ <strong>Load numbered items in order</strong> — heavy-duty and large items are placed first (towards the cab)</li>
               <li>✓ <strong>Match colors to the diagram</strong> — each item has a unique color for easy identification</li>
+              <li className="text-red-700">⚠ <strong>Fragile items (red dashed border)</strong> are loaded last and positioned near the rear door so they can be offloaded first without moving other items</li>
+              <li className="text-amber-700">! <strong>Careful items (amber dashed border)</strong> — electronics, instruments, and delicate items need padding and should not bear weight</li>
+              <li className="text-blue-700">▼ <strong>Heavy-duty items (blue border)</strong> — appliances and dense items go against the cab wall, strapped to anchor points</li>
               <li>✓ <strong>Weight distribution:</strong> Keep heavy items low and centered for safe driving</li>
-              <li>✓ <strong>Fragile items last:</strong> Load fragile items near the rear door so they come out first</li>
               <li>✓ <strong>Secure everything:</strong> Use ratchet straps at each row to prevent shifting</li>
             </ul>
           </div>

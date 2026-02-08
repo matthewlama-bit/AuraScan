@@ -1,31 +1,63 @@
-// Recommend a load out plan for each vehicle: order items for optimal loading (heavy/big first, fragile last)
-// For 2D placement, assume all items are rectangular and place them in rows (simple shelf algorithm)
+// ── Care-level priority for sorting (lower = load earlier = further from door) ──
+const CARE_PRIORITY: Record<CareLevel, number> = {
+  'heavy-duty': 0,   // heaviest/sturdiest → cab end (loaded first)
+  'standard': 1,
+  'careful': 2,
+  'fragile': 3,      // fragile → rear door (loaded last, offloaded first)
+};
+
+// Recommend a load out plan for each vehicle: heavy/sturdy items first (cab), fragile last (rear door)
+// Uses realistic 2D footprints so the SVG reflects actual item sizes.
 export function planLoadOut(inventory: InventoryItem[], availableVehicles = VEHICLE_TYPES) {
   const packed = planPacking(inventory, availableVehicles);
-  // For each vehicle, assign (x, y, w, h) for each item in a 2D top-down plan
-  // We'll use a simple shelf-packing algorithm: fill left-to-right, then start a new row
+
   return packed.map(vehicle => {
-    // Assume vehicle cargo area is 2m wide, length proportional to volume (approx)
-    const cargoWidth = 2; // meters
-    const cargoLength = Math.max(vehicle.type.maxVolumeM3 / cargoWidth, 2); // meters
-    // For each item, estimate width and length from volume (assume cubic, but cap width)
+    const cargoWidth = 2; // metres
+    const cargoLength = Math.max(vehicle.type.maxVolumeM3 / cargoWidth, 2);
+
+    // Sort items: heavy-duty → standard → careful → fragile
+    // Within same care level, bigger volume first
+    const sorted = [...vehicle.items].sort((a, b) => {
+      const ca = CARE_PRIORITY[inferCareLevel(a.name)];
+      const cb = CARE_PRIORITY[inferCareLevel(b.name)];
+      if (ca !== cb) return ca - cb;
+      return b.volumeM3 - a.volumeM3;
+    });
+
+    // Shelf-pack using realistic footprints
     let x = 0, y = 0, rowHeight = 0;
-    const placed = vehicle.items.map((item, i) => {
-      // Estimate item width and length (try to keep width <= 1.2m)
-      const area = Math.max(item.volumeM3 / 1.2, 0.2); // m^2
-      const width = Math.min(Math.sqrt(area), 1.2);
-      const length = Math.max(item.volumeM3 / width, 0.2);
-      // If doesn't fit in row, move to next row
-      if (x + width > cargoWidth) {
+    const placed = sorted.map((item, i) => {
+      const foot = inferFootprint(item.name, item.volumeM3);
+      let width = foot.w;
+      let length = foot.d;
+
+      // If item is wider than cargo, rotate it
+      if (width > cargoWidth && length <= cargoWidth) {
+        [width, length] = [length, width];
+      }
+      // Clamp to cargo width
+      width = Math.min(width, cargoWidth);
+
+      // Start new row if won't fit
+      if (x + width > cargoWidth + 0.01) {
         x = 0;
         y += rowHeight;
         rowHeight = 0;
       }
-      const pos = { x, y, width, length, name: item.name, massKg: item.massKg, volumeM3: item.volumeM3 };
+
+      const care = inferCareLevel(item.name);
+      const pos = {
+        x, y, width, length,
+        name: item.name,
+        massKg: item.massKg,
+        volumeM3: item.volumeM3,
+        care,
+      };
       x += width;
       rowHeight = Math.max(rowHeight, length);
       return pos;
     });
+
     return {
       ...vehicle,
       loadOrder: placed,
@@ -77,6 +109,139 @@ const DENSITY_OVERRIDES: Record<string, number> = {
 };
 
 const DEFAULT_DENSITY_KG_M3 = 150; // increased default for generic furniture
+
+// ── Realistic top-down footprints (width × depth in metres) ──
+// These represent the actual floor-space an item occupies when viewed from above.
+const FOOTPRINT_OVERRIDES: Record<string, { w: number; d: number }> = {
+  // Seating
+  sofa:        { w: 2.0, d: 0.9 },
+  couch:       { w: 2.0, d: 0.9 },
+  sectional:   { w: 2.8, d: 1.6 },
+  loveseat:    { w: 1.5, d: 0.85 },
+  armchair:    { w: 0.85, d: 0.85 },
+  recliner:    { w: 0.9, d: 0.9 },
+  ottoman:     { w: 0.6, d: 0.6 },
+  chair:       { w: 0.5, d: 0.5 },
+  stool:       { w: 0.4, d: 0.4 },
+  // Tables
+  'dining table': { w: 1.6, d: 0.9 },
+  'coffee table': { w: 1.2, d: 0.6 },
+  'side table':   { w: 0.5, d: 0.5 },
+  'end table':    { w: 0.5, d: 0.5 },
+  'console table':{ w: 1.2, d: 0.35 },
+  nightstand:  { w: 0.5, d: 0.4 },
+  table:       { w: 1.2, d: 0.75 },
+  desk:        { w: 1.4, d: 0.7 },
+  // Bedroom
+  'king bed':  { w: 2.0, d: 2.1 },
+  'queen bed': { w: 1.6, d: 2.1 },
+  bed:         { w: 1.6, d: 2.1 },
+  mattress:    { w: 1.6, d: 2.1 },
+  crib:        { w: 0.7, d: 1.3 },
+  // Storage
+  dresser:     { w: 1.3, d: 0.5 },
+  wardrobe:    { w: 1.2, d: 0.6 },
+  bookshelf:   { w: 0.9, d: 0.35 },
+  bookcase:    { w: 0.9, d: 0.35 },
+  cabinet:     { w: 0.9, d: 0.45 },
+  'filing cabinet': { w: 0.45, d: 0.6 },
+  shelf:       { w: 0.8, d: 0.3 },
+  // Appliances
+  fridge:      { w: 0.7, d: 0.7 },
+  refrigerator:{ w: 0.7, d: 0.7 },
+  washer:      { w: 0.6, d: 0.65 },
+  dryer:       { w: 0.6, d: 0.65 },
+  dishwasher:  { w: 0.6, d: 0.6 },
+  oven:        { w: 0.6, d: 0.6 },
+  stove:       { w: 0.6, d: 0.6 },
+  microwave:   { w: 0.5, d: 0.4 },
+  // Electronics
+  tv:          { w: 1.2, d: 0.15 },
+  television:  { w: 1.2, d: 0.15 },
+  monitor:     { w: 0.6, d: 0.15 },
+  computer:    { w: 0.5, d: 0.45 },
+  // Misc
+  lamp:        { w: 0.35, d: 0.35 },
+  'floor lamp': { w: 0.35, d: 0.35 },
+  rug:         { w: 0.4, d: 1.2 },  // rolled up
+  carpet:      { w: 0.4, d: 1.2 },
+  mirror:      { w: 0.6, d: 0.1 },
+  painting:    { w: 0.8, d: 0.1 },
+  art:         { w: 0.7, d: 0.1 },
+  box:         { w: 0.45, d: 0.45 },
+  suitcase:    { w: 0.5, d: 0.35 },
+  bike:        { w: 0.6, d: 1.8 },
+  bicycle:     { w: 0.6, d: 1.8 },
+  piano:       { w: 1.5, d: 0.65 },
+  treadmill:   { w: 0.7, d: 1.8 },
+};
+
+// ── Fragility / handling-care classification ──
+export type CareLevel = 'fragile' | 'careful' | 'standard' | 'heavy-duty';
+
+const CARE_OVERRIDES: Record<string, CareLevel> = {
+  // Fragile – glass, screens, ceramics
+  tv: 'fragile',
+  television: 'fragile',
+  monitor: 'fragile',
+  mirror: 'fragile',
+  lamp: 'fragile',
+  'floor lamp': 'fragile',
+  painting: 'fragile',
+  art: 'fragile',
+  vase: 'fragile',
+  chandelier: 'fragile',
+  glass: 'fragile',
+  china: 'fragile',
+  crystal: 'fragile',
+  // Careful – electronics, musical instruments, antiques
+  computer: 'careful',
+  printer: 'careful',
+  guitar: 'careful',
+  speaker: 'careful',
+  record: 'careful',
+  turntable: 'careful',
+  clock: 'careful',
+  aquarium: 'careful',
+  microwave: 'careful',
+  // Heavy-duty – appliances, large dense items
+  fridge: 'heavy-duty',
+  refrigerator: 'heavy-duty',
+  washer: 'heavy-duty',
+  dryer: 'heavy-duty',
+  dishwasher: 'heavy-duty',
+  oven: 'heavy-duty',
+  stove: 'heavy-duty',
+  piano: 'heavy-duty',
+  treadmill: 'heavy-duty',
+};
+
+export function inferCareLevel(name?: string): CareLevel {
+  if (!name) return 'standard';
+  const n = name.toLowerCase();
+  // Check longest keys first (multi-word) for best match
+  const keys = Object.keys(CARE_OVERRIDES).sort((a, b) => b.length - a.length);
+  for (const k of keys) {
+    if (n.includes(k)) return CARE_OVERRIDES[k];
+  }
+  return 'standard';
+}
+
+function inferFootprint(name?: string, volumeM3 = 0): { w: number; d: number } {
+  if (name) {
+    const n = name.toLowerCase();
+    // Check longest keys first for best match (e.g. 'dining table' before 'table')
+    const keys = Object.keys(FOOTPRINT_OVERRIDES).sort((a, b) => b.length - a.length);
+    for (const k of keys) {
+      if (n.includes(k)) return FOOTPRINT_OVERRIDES[k];
+    }
+  }
+  // Fallback: derive from volume assuming height ≈ 0.8m, keep width ≤ 1.0m
+  const area = Math.max(volumeM3 / 0.8, 0.1);
+  const w = Math.min(Math.sqrt(area), 1.0);
+  const d = Math.max(area / w, 0.15);
+  return { w, d };
+}
 
 function inferDensityKgPerM3(name?: string) {
   if (!name) return DEFAULT_DENSITY_KG_M3;
