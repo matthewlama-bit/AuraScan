@@ -19,16 +19,16 @@ export default function Header({ viewMode, setViewMode, totalQuote }: HeaderProp
             Survey
           </button>
           <button
-            onClick={() => setViewMode('unpack')}
-            className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase transition-all ${viewMode === 'unpack' ? 'bg-purple-600 text-white shadow-md' : 'bg-stone-100 text-stone-400'}`}
-          >
-            Unpack
-          </button>
-          <button
             onClick={() => setViewMode('logistics')}
             className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase transition-all ${viewMode === 'logistics' ? 'bg-cyan-600 text-white shadow-md' : 'bg-stone-100 text-stone-400'}`}
           >
             Logistics
+          </button>
+          <button
+            onClick={() => setViewMode('unpack')}
+            className={`px-3 py-1 rounded-full text-[9px] font-bold tracking-widest uppercase transition-all ${viewMode === 'unpack' ? 'bg-purple-600 text-white shadow-md' : 'bg-stone-100 text-stone-400'}`}
+          >
+            Unpack
           </button>
         </div>
       </div>
