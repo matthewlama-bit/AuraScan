@@ -19,7 +19,7 @@ const ROOM_COLORS = [
   { fill: 'rgba(99, 102, 241, 0.18)', stroke: '#6366f1', text: '#4338ca' },
 ];
 
-interface RoomZone {
+export interface RoomZone {
   roomId: string;
   roomName: string;
   x: number;
@@ -31,23 +31,23 @@ interface RoomZone {
 
 interface UnpackPanelProps {
   rooms: Room[];
+  step: number;
+  setStep: (step: number) => void;
+  floorPlanUrl: string | null;
+  setFloorPlanUrl: (url: string | null) => void;
+  roomZones: RoomZone[];
+  setRoomZones: React.Dispatch<React.SetStateAction<RoomZone[]>>;
+  furnitureAssignment: Record<string, InventoryItem[]>;
+  setFurnitureAssignment: (assignment: Record<string, InventoryItem[]>) => void;
 }
 
-export default function UnpackPanel({ rooms }: UnpackPanelProps) {
-  const [step, setStep] = useState(0);
-  const [floorPlanUrl, setFloorPlanUrl] = useState<string | null>(null);
-  const [floorPlanFile, setFloorPlanFile] = useState<File | null>(null);
-
-  // Drawing state
+export default function UnpackPanel({ rooms, step, setStep, floorPlanUrl, setFloorPlanUrl, roomZones, setRoomZones, furnitureAssignment, setFurnitureAssignment }: UnpackPanelProps) {
+  // Drawing state (transient, OK to reset on unmount)
   const [selectedRoomId, setSelectedRoomId] = useState<string>('');
-  const [roomZones, setRoomZones] = useState<RoomZone[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
   const [drawCurrent, setDrawCurrent] = useState<{ x: number; y: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Furniture assignment
-  const [furnitureAssignment, setFurnitureAssignment] = useState<Record<string, InventoryItem[]>>({});
 
   const getRelativePos = useCallback((e: React.MouseEvent) => {
     const el = containerRef.current;
@@ -158,7 +158,7 @@ export default function UnpackPanel({ rooms }: UnpackPanelProps) {
                       <Camera size={20} className="text-stone-900" />
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                         const file = e.target.files?.[0];
-                        if (file) { setFloorPlanUrl(URL.createObjectURL(file)); setFloorPlanFile(file); }
+                        if (file) { setFloorPlanUrl(URL.createObjectURL(file)); }
                       }} />
                     </label>
                   </div>
@@ -171,7 +171,7 @@ export default function UnpackPanel({ rooms }: UnpackPanelProps) {
                   <p className="text-sm font-black text-stone-500 uppercase tracking-widest">Upload Floor Plan Image</p>
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => {
                     const file = e.target.files?.[0];
-                    if (file) { setFloorPlanUrl(URL.createObjectURL(file)); setFloorPlanFile(file); }
+                    if (file) { setFloorPlanUrl(URL.createObjectURL(file)); }
                   }} />
                 </label>
               )}

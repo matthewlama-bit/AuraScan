@@ -11,11 +11,17 @@ import PhotoBox from './components/PhotoBox';
 import InventoryList from './components/InventoryList';
 import LogisticsPanel from './components/LogisticsPanel';
 import AggregatedLogisticsPanel from './components/AggregatedLogisticsPanel';
-import UnpackPanel from './components/UnpackPanel';
+import UnpackPanel, { RoomZone } from './components/UnpackPanel';
 
 export default function AuraMultiRoom() {
   const [viewMode, setViewMode] = useState<ViewMode | 'unpack'>("survey");
   const [hoveredItemIndex, setHoveredItemIndex] = useState<number | null>(null);
+
+  // Unpack state (lifted here so it persists across tab switches)
+  const [unpackStep, setUnpackStep] = useState(0);
+  const [floorPlanUrl, setFloorPlanUrl] = useState<string | null>(null);
+  const [roomZones, setRoomZones] = useState<RoomZone[]>([]);
+  const [furnitureAssignment, setFurnitureAssignment] = useState<Record<string, InventoryItem[]>>({});
 
   const {
     rooms,
@@ -47,7 +53,17 @@ export default function AuraMultiRoom() {
               <AggregatedLogisticsPanel rooms={rooms} />
             </div>
           ) : viewMode === 'unpack' ? (
-            <UnpackPanel rooms={rooms} />
+            <UnpackPanel
+              rooms={rooms}
+              step={unpackStep}
+              setStep={setUnpackStep}
+              floorPlanUrl={floorPlanUrl}
+              setFloorPlanUrl={setFloorPlanUrl}
+              roomZones={roomZones}
+              setRoomZones={setRoomZones}
+              furnitureAssignment={furnitureAssignment}
+              setFurnitureAssignment={setFurnitureAssignment}
+            />
           ) : (
             <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
               <PhotoBox activeRoom={activeRoom} handleFileUpload={handleFileUpload} loading={loading} hoveredItemIndex={hoveredItemIndex} />
