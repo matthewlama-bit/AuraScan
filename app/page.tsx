@@ -1,78 +1,22 @@
 'use client'
 
-import { useState } from 'react';
-import { ViewMode, Room, InventoryItem } from './types';
-import { PRICE_PER_M3, BASE_SERVICE_FEE } from './constants';
-import { useRooms } from './hooks/useRooms';
-import { useFileUpload } from './hooks/useFileUpload';
-import Header from './components/Header';
-import Sidebar from './components/Sidebar';
-import PhotoBox from './components/PhotoBox';
-import InventoryList from './components/InventoryList';
-import LogisticsPanel from './components/LogisticsPanel';
-import AggregatedLogisticsPanel from './components/AggregatedLogisticsPanel';
-import UnpackPanel, { RoomZone } from './components/UnpackPanel';
+import { useRole } from './context/RoleContext';
+import PlatformHeader from './components/PlatformHeader';
+import CustomerDashboard from './components/CustomerDashboard';
+import RemovalistDashboard from './components/RemovalistDashboard';
+import AdminDashboard from './components/AdminDashboard';
 
-export default function AuraMultiRoom() {
-  const [viewMode, setViewMode] = useState<ViewMode | 'unpack'>("survey");
-  const [hoveredItemIndex, setHoveredItemIndex] = useState<number | null>(null);
-
-  // Unpack state (lifted here so it persists across tab switches)
-  const [unpackStep, setUnpackStep] = useState(0);
-  const [floorPlanUrl, setFloorPlanUrl] = useState<string | null>(null);
-  const [roomZones, setRoomZones] = useState<RoomZone[]>([]);
-  const [furnitureAssignment, setFurnitureAssignment] = useState<Record<string, InventoryItem[]>>({});
-
-  const {
-    rooms,
-    activeRoomId,
-    activeRoom,
-    setActiveRoomId,
-    updateActiveRoom,
-    updateQuantity,
-    addRoom,
-  } = useRooms();
-
-  const { handleFileUpload, loading } = useFileUpload(updateActiveRoom, activeRoom);
-
-  const calculateRoomVolume = (room: Room) =>
-    room.inventory.reduce((sum: number, item: InventoryItem) => sum + (item.volume_per_unit * (item.quantity || 1)), 0);
-
-  const totalVolume = rooms.reduce((acc, r) => acc + calculateRoomVolume(r), 0);
-  const totalQuote = totalVolume > 0 ? (totalVolume * PRICE_PER_M3) + BASE_SERVICE_FEE : 0;
+export default function PlatformRoot() {
+  const { role } = useRole();
 
   return (
     <div className="min-h-screen bg-[#fcfaf7] flex flex-col font-sans text-stone-900 overflow-x-hidden">
-      <Header viewMode={viewMode} setViewMode={setViewMode} totalQuote={totalQuote} />
-      
-      <div className="flex flex-col lg:flex-row flex-1 overflow-hidden">
-        {viewMode !== 'logistics' && viewMode !== 'unpack' && <Sidebar rooms={rooms} activeRoomId={activeRoomId} setActiveRoomId={setActiveRoomId} addRoom={addRoom} updateActiveRoom={updateActiveRoom} />}
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto bg-white/50">
-          {viewMode === 'logistics' ? (
-            <div className="max-w-6xl mx-auto">
-              <AggregatedLogisticsPanel rooms={rooms} />
-            </div>
-          ) : viewMode === 'unpack' ? (
-            <UnpackPanel
-              rooms={rooms}
-              step={unpackStep}
-              setStep={setUnpackStep}
-              floorPlanUrl={floorPlanUrl}
-              setFloorPlanUrl={setFloorPlanUrl}
-              roomZones={roomZones}
-              setRoomZones={setRoomZones}
-              furnitureAssignment={furnitureAssignment}
-              setFurnitureAssignment={setFurnitureAssignment}
-            />
-          ) : (
-            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-              <PhotoBox activeRoom={activeRoom} handleFileUpload={handleFileUpload} loading={loading} hoveredItemIndex={hoveredItemIndex} />
-              <InventoryList activeRoom={activeRoom} updateQuantity={updateQuantity} loading={loading} hoveredItemIndex={hoveredItemIndex} setHoveredItemIndex={setHoveredItemIndex} />
-              {activeRoom && activeRoom.inventory.length > 0 && <LogisticsPanel activeRoom={activeRoom} />}
-            </div>
-          )}
-        </main>
-      </div>
+      <PlatformHeader />
+      <main className="flex-1 overflow-y-auto bg-white/50">
+        {role === 'customer'   && <CustomerDashboard />}
+        {role === 'removalist' && <RemovalistDashboard />}
+        {role === 'admin'      && <AdminDashboard />}
+      </main>
     </div>
   );
 }
