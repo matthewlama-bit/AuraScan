@@ -1,6 +1,6 @@
 import { Truck, Package, MapPin, AlertTriangle, Shield, ShieldAlert } from 'lucide-react';
 import { Room } from '../types';
-import { recommendVehiclesSummary, estimateMassKg, aggregateInventories, planLoadOut, inferCareLevel, CareLevel } from '../utils/logistics';
+import { recommendVehiclesSummary, estimateMassKg, aggregateInventories, planLoadOut, inferCareLevel, CareLevel, PlacedItem, Stackability } from '../utils/logistics';
 
 // Distinct colors for items so each is visually distinguishable in the van
 const ITEM_COLORS = [
@@ -80,6 +80,8 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
         const usedVolume = vehicle.loadOrder.reduce((s: number, it: any) => s + it.volumeM3, 0);
         const usedMass = vehicle.loadOrder.reduce((s: number, it: any) => s + it.massKg, 0);
         const fillPct = Math.min(100, (usedVolume / vehicle.type.maxVolumeM3) * 100);
+        const floorItems = vehicle.loadOrder.filter((it: any) => it.layer === 0).length;
+        const stackedItems = vehicle.loadOrder.filter((it: any) => it.layer > 0).length;
 
         // SVG dimensions — we render a top-down view of the cargo area
         const svgW = 400;
@@ -96,7 +98,7 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-stone-900 uppercase tracking-widest">{vehicle.type.name} #{vIdx + 1}</h3>
-                  <p className="text-[10px] text-stone-500">{vehicle.loadOrder.length} items · {usedVolume.toFixed(1)} m³ · {usedMass.toFixed(0)} kg</p>
+                  <p className="text-[10px] text-stone-500">{vehicle.loadOrder.length} items ({floorItems} floor{stackedItems > 0 ? `, ${stackedItems} stacked` : ''}) · {usedVolume.toFixed(1)} m³ · {usedMass.toFixed(0)} kg</p>
                 </div>
               </div>
               <div className="flex items-center gap-4">
@@ -116,7 +118,7 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                 <div className="relative">
                   {/* Van shape label */}
                   <div className="text-center mb-2">
-                    <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Top-Down Loading View</span>
+                    <span className="text-[9px] font-black text-stone-400 uppercase tracking-widest">Top-Down Loading View · 3D Packed</span>
                   </div>
                   <svg width={svgW + 40} height={svgH + 80} className="drop-shadow-lg">
                     {/* Van body outline */}
@@ -141,21 +143,29 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                     {/* Packed items */}
                     {vehicle.loadOrder.map((item: any, i: number) => {
                       const color = ITEM_COLORS[i % ITEM_COLORS.length];
-                      const rx = 20 + item.x * scale;
-                      const ry = 40 + item.y * scale;
-                      const rw = item.width * scale;
-                      const rh = item.length * scale;
+                      const layer: number = item.layer || 0;
+                      // Stacked items get a small visual offset to show depth
+                      const stackOffset = layer * 4;
+                      const rx = 20 + item.x * scale + stackOffset;
+                      const ry = 40 + item.y * scale + stackOffset;
+                      const rw = item.width * scale - stackOffset;
+                      const rh = item.length * scale - stackOffset;
                       const care: CareLevel = item.care || 'standard';
                       const cs = CARE_STYLES[care];
                       // Truncate label to fit
                       const maxChars = Math.max(2, Math.floor(rw / 7));
                       const label = item.name.length > maxChars ? item.name.slice(0, maxChars - 1) + '…' : item.name;
                       const showLabel = rw > 28 && rh > 16;
+                      const opacity = layer === 0 ? 0.9 : 0.75;
 
                       return (
                         <g key={i}>
+                          {/* Drop shadow for stacked items */}
+                          {layer > 0 && (
+                            <rect x={rx + 2} y={ry + 2} width={rw} height={rh} fill="rgba(0,0,0,0.15)" rx={3} />
+                          )}
                           {/* Item fill */}
-                          <rect x={rx} y={ry} width={rw} height={rh} fill={color} stroke={cs.border || 'rgba(0,0,0,0.3)'} strokeWidth={cs.border ? 2.5 : 1} strokeDasharray={cs.dash} rx={3} opacity={0.9} />
+                          <rect x={rx} y={ry} width={rw} height={rh} fill={color} stroke={cs.border || 'rgba(0,0,0,0.3)'} strokeWidth={cs.border ? 2.5 : 1} strokeDasharray={cs.dash} rx={3} opacity={opacity} />
                           {/* Label */}
                           {showLabel && (
                             <text x={rx + rw / 2} y={ry + rh / 2 + 1} textAnchor="middle" dominantBaseline="middle" fill="rgba(0,0,0,0.7)" fontSize={Math.min(11, rh * 0.6, rw * 0.25)} fontWeight="bold">
@@ -167,6 +177,15 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                           <text x={rx + 8} y={ry + 8} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={8} fontWeight="bold">
                             {i + 1}
                           </text>
+                          {/* Layer badge (bottom-left for stacked items) */}
+                          {layer > 0 && rw > 20 && rh > 20 && (
+                            <>
+                              <rect x={rx + 2} y={ry + rh - 16} width={22} height={14} rx={3} fill="rgba(0,0,0,0.6)" />
+                              <text x={rx + 13} y={ry + rh - 8} textAnchor="middle" dominantBaseline="middle" fill="white" fontSize={8} fontWeight="bold">
+                                L{layer + 1}
+                              </text>
+                            </>
+                          )}
                           {/* Fragile / careful warning badge (top-right) */}
                           {care !== 'standard' && rw > 20 && rh > 20 && (
                             <>
@@ -186,7 +205,7 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
 
                     {/* Dimension labels */}
                     <text x={svgW / 2 + 20} y={svgH + 78} textAnchor="middle" fill="#94a3b8" fontSize={9}>
-                      {vehicle.cargoWidth.toFixed(1)}m × {vehicle.cargoLength.toFixed(1)}m cargo area
+                      {vehicle.cargoWidth.toFixed(1)}m × {vehicle.cargoLength.toFixed(1)}m × {(vehicle as any).cargoHeight?.toFixed(1) || '?'}m (W×L×H)
                     </text>
                   </svg>
                 </div>
@@ -200,6 +219,7 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                     const color = ITEM_COLORS[i % ITEM_COLORS.length];
                     const care: CareLevel = item.care || 'standard';
                     const cs = CARE_STYLES[care];
+                    const layer: number = item.layer || 0;
                     return (
                       <div key={i} className="flex items-center gap-2 bg-stone-50 rounded-lg px-3 py-2 border border-stone-200">
                         <div className="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-black text-white shrink-0" style={{ backgroundColor: color }}>
@@ -207,7 +227,10 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="text-xs font-black text-stone-900 truncate">{item.name}</div>
-                          <div className="text-[9px] text-stone-500">{item.volumeM3.toFixed(2)} m³ · {item.massKg.toFixed(1)} kg</div>
+                          <div className="text-[9px] text-stone-500">
+                            {item.volumeM3.toFixed(2)} m³ · {item.massKg.toFixed(1)} kg
+                            {layer > 0 && <span className="ml-1 text-indigo-600 font-bold">· stacked (L{layer + 1})</span>}
+                          </div>
                         </div>
                         {care !== 'standard' && (
                           <span className={`text-[8px] font-black px-1.5 py-0.5 rounded border shrink-0 ${cs.badge}`}>{cs.badgeText}</span>
@@ -225,6 +248,7 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
                     <div className="flex items-center gap-2 text-[10px]"><span className="w-3 h-3 rounded-sm border-2 border-dashed border-red-500 bg-red-50 shrink-0" /> <span className="text-red-700 font-bold">Fragile</span> <span className="text-stone-400">— load last, offload first</span></div>
                     <div className="flex items-center gap-2 text-[10px]"><span className="w-3 h-3 rounded-sm border-2 border-dashed border-amber-500 bg-amber-50 shrink-0" /> <span className="text-amber-700 font-bold">Careful</span> <span className="text-stone-400">— electronics, instruments</span></div>
                     <div className="flex items-center gap-2 text-[10px]"><span className="w-3 h-3 rounded-sm border-2 border-blue-500 bg-blue-50 shrink-0" /> <span className="text-blue-700 font-bold">Heavy</span> <span className="text-stone-400">— secure against cab wall</span></div>
+                    <div className="flex items-center gap-2 text-[10px]"><span className="w-3 h-3 rounded-sm bg-indigo-200 border border-indigo-400 shrink-0 relative"><span className="absolute -top-0.5 -right-0.5 text-[6px] font-bold text-indigo-700">L2</span></span> <span className="text-indigo-700 font-bold">Stacked</span> <span className="text-stone-400">— lighter items on sturdy bases</span></div>
                   </div>
                 </div>
               </div>
@@ -276,6 +300,7 @@ export default function AggregatedLogisticsPanel({ rooms }: AggregatedLogisticsP
             <ul className="text-xs text-stone-700 mt-2 space-y-2">
               <li>✓ <strong>Load numbered items in order</strong> — heavy-duty and large items are placed first (towards the cab)</li>
               <li>✓ <strong>Match colors to the diagram</strong> — each item has a unique color for easy identification</li>
+              <li className="text-indigo-700">⬆ <strong>Stacked items (L2+)</strong> are lighter items placed on top of sturdy bases — the truck is packed in 3D to maximize space</li>
               <li className="text-red-700">⚠ <strong>Fragile items (red dashed border)</strong> are loaded last and positioned near the rear door so they can be offloaded first without moving other items</li>
               <li className="text-amber-700">! <strong>Careful items (amber dashed border)</strong> — electronics, instruments, and delicate items need padding and should not bear weight</li>
               <li className="text-blue-700">▼ <strong>Heavy-duty items (blue border)</strong> — appliances and dense items go against the cab wall, strapped to anchor points</li>
